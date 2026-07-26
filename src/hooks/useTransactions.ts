@@ -52,8 +52,8 @@ export const useTransactions = () => {
           // Award XP, Gold remains unchanged
           await updateUserStats(10, 0);
           addNotification({
-            title: 'Card Charge Recorded',
-            message: `Charged ${newTx.amount}g to relic [${newTx.description}]. +10 XP!`,
+            title: 'SYSTEM UPDATED',
+            message: 'Expense Recorded Successfully',
             type: 'success',
             xpGained: 10,
           });
@@ -61,8 +61,8 @@ export const useTransactions = () => {
           // Cash/Wallet Expense
           await updateUserStats(10, -newTx.amount);
           addNotification({
-            title: 'Gold Expended',
-            message: `Spent ${newTx.amount}g on [${newTx.description}]. +10 XP!`,
+            title: 'SYSTEM UPDATED',
+            message: 'Expense Recorded Successfully',
             type: 'success',
             xpGained: 10,
           });
@@ -71,8 +71,8 @@ export const useTransactions = () => {
         // Income
         await updateUserStats(15, newTx.amount);
         addNotification({
-          title: 'Loot Acquired!',
-          message: `Earned ${newTx.amount}g from [${newTx.description}]. +15 XP!`,
+          title: 'SYSTEM UPDATED',
+          message: 'Income Recorded Successfully',
           type: 'success',
           xpGained: 15,
         });

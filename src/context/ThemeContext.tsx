@@ -5,6 +5,8 @@ export type ThemeType = 'light' | 'dark' | 'system-rpg';
 interface ThemeContextType {
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
+  animationsEnabled: boolean;
+  setAnimationsEnabled: (enabled: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -23,9 +25,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved || 'system-rpg'; // System RPG Mode is default
   });
 
+  const [animationsEnabled, setAnimationsEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('rpg_animations_enabled');
+    return saved === null ? true : saved === 'true';
+  });
+
   const setTheme = (newTheme: ThemeType) => {
     setThemeState(newTheme);
     localStorage.setItem('rpg_theme', newTheme);
+  };
+
+  const setAnimationsEnabled = (enabled: boolean) => {
+    setAnimationsEnabledState(enabled);
+    localStorage.setItem('rpg_animations_enabled', String(enabled));
   };
 
   useEffect(() => {
@@ -46,7 +58,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, animationsEnabled, setAnimationsEnabled }}>
       {children}
     </ThemeContext.Provider>
   );

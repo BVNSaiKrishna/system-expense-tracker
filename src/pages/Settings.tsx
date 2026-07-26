@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
 import { useAuth, getRankName } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { dbService } from '../services/dbService';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import {
   Sun,
   Moon,
   Sparkles,
-  User,
   ShieldCheck,
   ShieldAlert,
-  ChevronRight,
   Database,
-  ArrowUpCircle,
 } from 'lucide-react';
-import { isFirebaseConfigured } from '../config/firebase';
 
 export const Settings: React.FC = () => {
   const { user, updateUserProfile, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, animationsEnabled, setAnimationsEnabled } = useTheme();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [currencyGold, setCurrencyGold] = useState(user?.currencyGold || 0);
@@ -37,13 +32,12 @@ export const Settings: React.FC = () => {
     setErrorMsg('');
 
     if (!displayName.trim()) {
-      setErrorMsg('Player tag must not be empty.');
+      setErrorMsg('Display name must not be empty.');
       return;
     }
 
     setSubmitting(true);
     try {
-      // Save updated user profile
       const updatedProfile = { 
         ...user, 
         displayName: displayName.trim(),
@@ -53,7 +47,7 @@ export const Settings: React.FC = () => {
         rankName: getRankName(Number(level))
       };
       await updateUserProfile(updatedProfile);
-      setSuccessMsg('Character profile updated successfully.');
+      setSuccessMsg('Profile updated successfully.');
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to update profile.');
     } finally {
@@ -64,47 +58,47 @@ export const Settings: React.FC = () => {
   return (
     <div className="space-y-6 w-full max-w-4xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-950/40 p-4 border border-slate-900 rounded-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 text-left">
         <div>
-          <span className="text-[10px] font-mono text-neon-blue uppercase tracking-widest block">
-            System configuration terminal
+          <span className="text-[10px] font-sans font-bold text-slate-500 uppercase tracking-wider block">
+            System Config Terminal
           </span>
-          <h1 className="text-xl font-display font-black text-white uppercase tracking-wider mt-1">
-            System Settings
+          <h1 className="text-xl font-bold text-white tracking-tight mt-0.5">
+            Settings
           </h1>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
         
         {/* Left Column: Profile Card & Sync status */}
         <div className="space-y-6 md:col-span-1">
-          <Card glowColor="none" className="p-5 flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-full bg-neon-blue/15 border border-neon-blue flex items-center justify-center text-neon-blue text-lg font-display font-black shadow-md">
+          <Card glowColor="none" className="p-6 bg-white/5 border border-white/5 rounded-2xl shadow-md backdrop-blur-xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#00C8FF] text-lg font-bold shadow-sm">
               {user.displayName.substring(0, 2).toUpperCase()}
             </div>
             
-            <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider mt-4">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wide mt-4">
               {user.displayName}
             </h3>
-            <span className="text-[9px] font-mono text-slate-500 uppercase mt-0.5">
-              Rank: {user.rankName}
+            <span className="text-[9px] font-sans font-semibold text-slate-500 uppercase tracking-wider mt-1">
+              {user.rankName}
             </span>
 
-            <div className="h-px bg-slate-900 w-full my-4" />
+            <div className="h-px bg-white/5 w-full my-4" />
 
-            <div className="w-full text-left space-y-2 text-[10px] font-mono text-slate-400 uppercase">
+            <div className="w-full space-y-2 text-[10px] font-mono text-slate-400 uppercase">
               <div className="flex justify-between">
                 <span>Access Level:</span>
                 <span className="text-white">LVL {user.level}</span>
               </div>
               <div className="flex justify-between">
-                <span>Loot Gold:</span>
-                <span className="text-neon-amber font-bold">{user.currencyGold.toLocaleString()}G</span>
+                <span>Gold Balance:</span>
+                <span className="text-[#FACC15] font-bold">{user.currencyGold.toLocaleString()} G</span>
               </div>
               <div className="flex justify-between">
-                <span>Streak Day:</span>
-                <span className="text-neon-amber font-bold">{user.streak} DAYS</span>
+                <span>Session Streak:</span>
+                <span className="text-[#22C55E] font-bold">{user.streak} DAYS</span>
               </div>
             </div>
 
@@ -113,9 +107,9 @@ export const Settings: React.FC = () => {
               size="sm"
               fullWidth={true}
               onClick={logout}
-              className="mt-6"
+              className="mt-6 rounded-xl py-2.5 font-sans font-bold uppercase text-[10px] tracking-wider"
             >
-              Terminate Session
+              Sign Out
             </Button>
           </Card>
         </div>
@@ -124,117 +118,142 @@ export const Settings: React.FC = () => {
         <div className="space-y-6 md:col-span-2">
           
           {/* 1. Theme Configuration panel */}
-          <Card glowColor="none" className="p-5">
-            <h3 className="text-xs font-display font-black text-white uppercase tracking-widest pb-3 border-b border-slate-900 mb-4">
-              Theme Interface Signature
+          <Card glowColor="none" className="p-6 bg-white/5 border border-white/5 rounded-2xl shadow-md backdrop-blur-xl">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider pb-3.5 border-b border-white/5 mb-4">
+              Interface Styling
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               
               <button
                 onClick={() => setTheme('light')}
-                className={`flex flex-col items-center gap-2 p-4 border rounded-lg transition-all cursor-pointer ${
+                className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all cursor-pointer ${
                   theme === 'light'
-                    ? 'border-neon-amber bg-neon-amber/5 text-neon-amber shadow-md'
-                    : 'border-slate-800 bg-slate-950/20 text-slate-400 hover:text-slate-200'
+                    ? 'border-[#FACC15] bg-[#FACC15]/10 text-[#FACC15]'
+                    : 'border-white/5 bg-white/2 text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
                 <Sun className="w-5 h-5" />
-                <span className="text-[10px] font-display font-bold uppercase tracking-wider">Luminous (Light)</span>
+                <span className="text-[9px] font-sans font-bold uppercase tracking-wider">Light Mode</span>
               </button>
 
               <button
                 onClick={() => setTheme('dark')}
-                className={`flex flex-col items-center gap-2 p-4 border rounded-lg transition-all cursor-pointer ${
+                className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all cursor-pointer ${
                   theme === 'dark'
-                    ? 'border-neon-purple bg-neon-purple/5 text-neon-purple shadow-md'
-                    : 'border-slate-800 bg-slate-950/20 text-slate-400 hover:text-slate-200'
+                    ? 'border-[#9d4edd] bg-[#9d4edd]/10 text-[#9d4edd]'
+                    : 'border-white/5 bg-white/2 text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
                 <Moon className="w-5 h-5" />
-                <span className="text-[10px] font-display font-bold uppercase tracking-wider">Obscure (Dark)</span>
+                <span className="text-[9px] font-sans font-bold uppercase tracking-wider">Dark Mode</span>
               </button>
 
               <button
                 onClick={() => setTheme('system-rpg')}
-                className={`flex flex-col items-center gap-2 p-4 border rounded-lg transition-all cursor-pointer ${
+                className={`flex flex-col items-center gap-2 p-4 border rounded-xl transition-all cursor-pointer ${
                   theme === 'system-rpg'
-                    ? 'border-neon-blue bg-neon-blue/5 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-                    : 'border-slate-800 bg-slate-950/20 text-slate-400 hover:text-slate-200'
+                    ? 'border-[#00C8FF] bg-[#00C8FF]/10 text-[#00C8FF]'
+                    : 'border-white/5 bg-white/2 text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 }`}
               >
-                <Sparkles className="w-5 h-5 animate-pulse" />
-                <span className="text-[10px] font-display font-bold uppercase tracking-wider">Holo RPG (System)</span>
+                <Sparkles className="w-5 h-5" />
+                <span className="text-[9px] font-sans font-bold uppercase tracking-wider">Glassmorphism</span>
               </button>
 
             </div>
+
+            {/* GPU Animations Switcher */}
+            <div className="flex items-center justify-between p-4 bg-white/2 border border-white/5 rounded-xl mt-4">
+              <div>
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  GPU Acceleration Effects
+                </h4>
+                <p className="text-[9px] text-slate-500 uppercase tracking-wide mt-0.5">
+                  Toggle dynamic wallpaper, particles, and float motion
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnimationsEnabled(!animationsEnabled)}
+                className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-300 focus:outline-none cursor-pointer flex items-center ${
+                  animationsEnabled ? 'bg-[#00C8FF]' : 'bg-white/15'
+                }`}
+              >
+                <div
+                  className={`w-4.5 h-4.5 rounded-full bg-slate-950 transition-transform duration-300 ${
+                    animationsEnabled ? 'translate-x-4.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </Card>
 
-          {/* 2. Character customization profile form */}
-          <Card glowColor="none" className="p-5">
-            <h3 className="text-xs font-display font-black text-white uppercase tracking-widest pb-3 border-b border-slate-900 mb-4">
-              Character Profile registry
+          {/* 2. Profile Customization Form */}
+          <Card glowColor="none" className="p-6 bg-white/5 border border-white/5 rounded-2xl shadow-md backdrop-blur-xl">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider pb-3.5 border-b border-white/5 mb-4">
+              User Profile Settings
             </h3>
             
             <form onSubmit={handleProfileSave} className="space-y-4">
               {successMsg && (
-                <div className="p-3 bg-neon-green/10 border border-neon-green/30 rounded text-neon-green text-xs font-mono uppercase">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-semibold">
                   {successMsg}
                 </div>
               )}
               {errorMsg && (
-                <div className="p-3 bg-neon-red/10 border border-neon-red/30 rounded text-neon-red text-xs font-mono uppercase">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-semibold">
                   {errorMsg}
                 </div>
               )}
 
               <div>
-                <label className="block text-[9px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
-                  Character Tag (Display Name)
+                <label className="block text-[9px] font-sans font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Display Name
                 </label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2.5 text-xs text-white focus:outline-none focus:border-neon-blue"
+                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00C8FF]"
                 />
               </div>
 
               <div>
-                <label className="block text-[9px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
-                  Vault Gold (Recalibration)
+                <label className="block text-[9px] font-sans font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Gold Balance
                 </label>
                 <input
                   type="number"
                   value={currencyGold}
                   onChange={(e) => setCurrencyGold(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2.5 text-xs text-white focus:outline-none focus:border-neon-blue"
+                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00C8FF]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
-                    Character Level (Recalibration)
+                  <label className="block text-[9px] font-sans font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    User Level
                   </label>
                   <input
                     type="number"
                     value={level}
                     onChange={(e) => setLevel(Number(e.target.value))}
                     min={1}
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2.5 text-xs text-white focus:outline-none focus:border-neon-blue"
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00C8FF]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
-                    Experience XP (Recalibration)
+                  <label className="block text-[9px] font-sans font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    XP Progress
                   </label>
                   <input
                     type="number"
                     value={xp}
                     onChange={(e) => setXp(Number(e.target.value))}
                     min={0}
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2.5 text-xs text-white focus:outline-none focus:border-neon-blue"
+                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00C8FF]"
                   />
                 </div>
               </div>
@@ -243,38 +262,39 @@ export const Settings: React.FC = () => {
                 <Button
                   type="submit"
                   variant="primary"
-                  glow={true}
+                  glow={false}
                   disabled={submitting}
+                  className="rounded-xl px-6 py-2.5 font-sans font-bold uppercase text-[10px] tracking-wider"
                 >
-                  {submitting ? 'Updating Registry...' : 'Save Profile Changes'}
+                  {submitting ? 'Saving Profile...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
           </Card>
 
           {/* 3. Database synchronization parameters info */}
-          <Card glowColor="none" className="p-5">
-            <h3 className="text-xs font-display font-black text-white uppercase tracking-widest pb-3 border-b border-slate-900 mb-4 flex items-center gap-2">
+          <Card glowColor="none" className="p-6 bg-white/5 border border-white/5 rounded-2xl shadow-md backdrop-blur-xl">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider pb-3.5 border-b border-white/5 mb-4 flex items-center gap-2">
               <Database className="w-4 h-4 text-neon-blue" />
-              Sync Ledger parameters
+              Database Sync Status
             </h3>
             
-            <div className="space-y-4 text-xs font-mono uppercase text-slate-400 leading-relaxed">
-              <div className="flex items-start gap-3 p-3.5 bg-slate-950/40 border border-slate-900 rounded">
+            <div className="space-y-4 text-xs text-slate-400 leading-relaxed">
+              <div className="flex items-start gap-3 p-3.5 bg-white/2 border border-white/5 rounded-xl">
                 {user.isGuest ? (
                   <>
-                    <ShieldAlert className="w-5 h-5 text-neon-amber mt-0.5 flex-shrink-0 animate-pulse" />
-                    <div>
-                      <span className="text-[10px] text-neon-amber font-bold block mb-1">Guest Session Registry</span>
-                      Your records are strictly cached inside this browser storage. Log out or clear browser cache, and all inventory data will be lost. To secure your data, re-authenticate with a Firebase Cloud credential to sync automatically.
+                    <ShieldAlert className="w-5 h-5 text-[#FACC15] mt-0.5 flex-shrink-0 animate-pulse" />
+                    <div className="font-sans font-medium text-[10px] text-slate-400 text-left">
+                      <span className="text-[#FACC15] font-bold block mb-1">Local Browser Session</span>
+                      Your records are stored locally inside this browser. Signing out or clearing browser cookies will delete all your financial data. To back up your data, link your profile to a Firebase account.
                     </div>
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="w-5 h-5 text-neon-green mt-0.5 flex-shrink-0" />
-                    <div>
-                      <span className="text-[10px] text-neon-green font-bold block mb-1">Cloud Sync Activated</span>
-                      Your profile logs are securely synchronized with Cloud Firestore database records. Real-time multi-device cloud replication and offline access caches are operational.
+                    <ShieldCheck className="w-5 h-5 text-[#22C55E] mt-0.5 flex-shrink-0" />
+                    <div className="font-sans font-medium text-[10px] text-slate-400 text-left">
+                      <span className="text-[#22C55E] font-bold block mb-1">Cloud Synced Profile</span>
+                      Your records are synchronized in real-time with Cloud Firestore. Your balance, quests, achievements, and transaction history are safe and access-replicated across devices.
                     </div>
                   </>
                 )}
@@ -289,4 +309,5 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
+
 export default Settings;

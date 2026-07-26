@@ -45,13 +45,47 @@ export interface CreditCard {
   id: string;
   userId: string;
   name: string;
+  bank: string;
+  last4Digits: string;
   limit: number;
-  balance: number;
-  dueDate: number; // Day of month (e.g. 15)
-  statementDate: number; // Day of month (e.g. 5)
-  color: 'blue' | 'purple' | 'amber' | 'pink' | 'green';
+  balance: number; // outstanding balance
+  dueDate: number; // day of month (e.g. 25)
+  statementDate: number; // day of month (e.g. 5)
+  statementCycle: string; // e.g. "Monthly"
+  interestRate?: number; // annual interest rate % (optional)
+  annualFee: number;
+  rewardProgramName: string;
+  color: 'blue' | 'purple' | 'amber' | 'pink' | 'green' | 'red' | 'silver' | 'gold';
   rarity: RarityType;
+  network: 'Visa' | 'Mastercard' | 'Amex' | 'RuPay';
+  rewardPoints: number;
+  cashbackEarned: number;
+  milesEarned: number;
+  vouchersEarned: number;
   createdAt: number;
+}
+
+export interface CreditCardPayment {
+  id: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  paymentMethod: string;
+}
+
+export interface CreditCardStatement {
+  id: string;
+  cardId: string;
+  userId: string;
+  statementMonth: string; // e.g. "2026-07"
+  statementDate: string; // YYYY-MM-DD
+  dueDate: string; // YYYY-MM-DD
+  statementAmount: number;
+  minimumDue: number;
+  totalDue: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'Paid' | 'Upcoming' | 'Due Soon' | 'Overdue' | 'Statement Generated' | 'Payment Processing';
+  payments: CreditCardPayment[];
 }
 
 export interface Achievement {

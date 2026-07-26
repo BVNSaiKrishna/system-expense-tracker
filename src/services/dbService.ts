@@ -12,7 +12,7 @@ import {
   orderBy,
   where,
 } from 'firebase/firestore';
-import { UserProfile, Transaction, SavingsGoal, CreditCard } from '../types';
+import { UserProfile, Transaction, SavingsGoal, CreditCard, CreditCardStatement, CreditCardPayment } from '../types';
 
 // LOCAL STORAGE FALLBACK HELPERS
 const getLocalData = <T>(key: string): T[] => {
@@ -345,12 +345,23 @@ export const dbService = {
         const colRef = collection(db, 'users', userId, 'creditCards');
         const docRef = await addDoc(colRef, {
           name: newCard.name,
+          bank: newCard.bank,
+          last4Digits: newCard.last4Digits,
           limit: newCard.limit,
           balance: newCard.balance,
           dueDate: newCard.dueDate,
           statementDate: newCard.statementDate,
+          statementCycle: newCard.statementCycle,
+          interestRate: newCard.interestRate || null,
+          annualFee: newCard.annualFee,
+          rewardProgramName: newCard.rewardProgramName,
           color: newCard.color,
           rarity: newCard.rarity,
+          network: newCard.network,
+          rewardPoints: newCard.rewardPoints,
+          cashbackEarned: newCard.cashbackEarned,
+          milesEarned: newCard.milesEarned,
+          vouchersEarned: newCard.vouchersEarned,
           createdAt: newCard.createdAt,
           userId: newCard.userId,
         });
@@ -385,12 +396,23 @@ export const dbService = {
         const docRef = doc(db, 'users', userId, 'creditCards', card.id);
         await setDoc(docRef, {
           name: card.name,
+          bank: card.bank,
+          last4Digits: card.last4Digits,
           limit: card.limit,
           balance: card.balance,
           dueDate: card.dueDate,
           statementDate: card.statementDate,
+          statementCycle: card.statementCycle,
+          interestRate: card.interestRate || null,
+          annualFee: card.annualFee,
+          rewardProgramName: card.rewardProgramName,
           color: card.color,
           rarity: card.rarity,
+          network: card.network,
+          rewardPoints: card.rewardPoints,
+          cashbackEarned: card.cashbackEarned,
+          milesEarned: card.milesEarned,
+          vouchersEarned: card.vouchersEarned,
         }, { merge: true });
       } catch (error) {
         console.error('Firestore updateCreditCard error:', error);
@@ -413,6 +435,120 @@ export const dbService = {
         await deleteDoc(docRef);
       } catch (error) {
         console.error('Firestore deleteCreditCard error:', error);
+      }
+    }
+  },
+
+  // CREDIT CARD STATEMENTS SERVICES
+  async getStatements(userId: string, isGuest: boolean): Promise<CreditCardStatement[]> {
+    if (isFirebaseConfigured && !isGuest && db) {
+      try {
+        const colRef = collection(db, 'users', userId, 'statements');
+        const querySnapshot = await getDocs(colRef);
+        const statements: CreditCardStatement[] = [];
+        querySnapshot.forEach((doc) => {
+          statements.push({ id: doc.id, ...doc.data() } as CreditCardStatement);
+        });
+        setLocalData(`rpg_statements_${userId}`, statements);
+        return statements;
+      } catch (error) {
+        console.error('Firestore getStatements error (using local backup):', error);
+      }
+    }
+    return getLocalData<CreditCardStatement>(`rpg_statements_${userId}`);
+  },
+
+  async saveStatement(userId: string, isGuest: boolean, stmt: CreditCardStatement): Promise<void> {
+    const stmts = getLocalData<CreditCardStatement>(`rpg_statements_${userId}`);
+    const index = stmts.findIndex((s) => s.id === stmt.id);
+    if (index > -1) {
+      stmts[index] = stmt;
+    } else {
+      stmts.push(stmt);
+    }
+    setLocalData(`rpg_statements_${userId}`, stmts);
+
+    if (isFirebaseConfigured && !isGuest && db) {
+      try {
+        const docRef = doc(db, 'users', userId, 'statements', stmt.id);
+        await setDoc(docRef, stmt, { merge: true });
+      } catch (error) {
+        console.error('Firestore saveStatement error:', error);
+      }
+    }
+  },
+
+  async generateBillingStatements(userId: string, isGuest: boolean): Promise<void> {
+    const cards = await this.getCreditCards(userId, isGuest);
+    const statements = await this.getStatements(userId, isGuest);
+    const transactions = await this.getTransactions(userId, isGuest);
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-indexed
+
+    for (const card of cards) {
+      // Check the last 3 months to generate billing statements
+      for (let offset = -2; offset <= 0; offset++) {
+        let targetMonth = currentMonth + offset;
+        let targetYear = currentYear;
+        if (targetMonth <= 0) {
+          targetMonth += 12;
+          targetYear -= 1;
+        }
+
+        const monthStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+        const stmtExists = statements.some((s) => s.cardId === card.id && s.statementMonth === monthStr);
+        
+        if (stmtExists) continue;
+
+        // Check if statement date is passed
+        const targetStatementDate = new Date(targetYear, targetMonth - 1, card.statementDate);
+        if (today < targetStatementDate) continue;
+
+        // Generate statement
+        const startDate = new Date(targetYear, targetMonth - 2, card.statementDate + 1);
+        const endDate = new Date(targetYear, targetMonth - 1, card.statementDate);
+
+        const cycleTxs = transactions.filter((t) => {
+          if (t.cardId !== card.id || t.type !== 'expense') return false;
+          const txDate = new Date(t.date);
+          return txDate >= startDate && txDate <= endDate;
+        });
+
+        const statementAmount = cycleTxs.reduce((sum, t) => sum + t.amount, 0);
+
+        let dueYear = targetYear;
+        let dueMonth = targetMonth;
+        if (card.dueDate < card.statementDate) {
+          dueMonth += 1;
+          if (dueMonth > 12) {
+            dueMonth = 1;
+            dueYear += 1;
+          }
+        }
+        const dueDate = new Date(dueYear, dueMonth - 1, card.dueDate);
+
+        const statementDateStr = targetStatementDate.toISOString().split('T')[0];
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+
+        const newStatement: CreditCardStatement = {
+          id: `${card.id}-${monthStr}`,
+          cardId: card.id,
+          userId,
+          statementMonth: monthStr,
+          statementDate: statementDateStr,
+          dueDate: dueDateStr,
+          statementAmount,
+          minimumDue: Math.max(500, Math.round(statementAmount * 0.05)),
+          totalDue: statementAmount,
+          paidAmount: 0,
+          remainingAmount: statementAmount,
+          status: today > dueDate ? 'Overdue' : 'Statement Generated',
+          payments: [],
+        };
+
+        await this.saveStatement(userId, isGuest, newStatement);
       }
     }
   },
@@ -449,12 +585,23 @@ export const dbService = {
       for (const c of cards) {
         await this.addCreditCard(userUid, false, {
           name: c.name,
+          bank: c.bank || 'Unknown Bank',
+          last4Digits: c.last4Digits || '0000',
           limit: c.limit,
           balance: c.balance,
           dueDate: c.dueDate,
           statementDate: c.statementDate,
-          color: c.color,
-          rarity: c.rarity,
+          statementCycle: c.statementCycle || 'Monthly',
+          interestRate: c.interestRate,
+          annualFee: c.annualFee || 0,
+          rewardProgramName: c.rewardProgramName || 'Points',
+          color: c.color || 'blue',
+          network: c.network || 'Visa',
+          rewardPoints: c.rewardPoints || 0,
+          cashbackEarned: c.cashbackEarned || 0,
+          milesEarned: c.milesEarned || 0,
+          vouchersEarned: c.vouchersEarned || 0,
+          rarity: c.rarity || 'common',
         });
       }
 

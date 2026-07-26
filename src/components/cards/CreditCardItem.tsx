@@ -36,7 +36,10 @@ export const CreditCardItem: React.FC<CreditCardItemProps> = ({ card, onPayClick
     amber: 'gold' as const,
     pink: 'red' as const,
     green: 'green' as const,
-  }[card.color];
+    red: 'red' as const,
+    silver: 'none' as const,
+    gold: 'gold' as const,
+  }[card.color || 'blue'];
 
   const handleDelete = async () => {
     if (window.confirm(`Dismantle card relic [${card.name}]? All transaction links will be disconnected.`)) {
