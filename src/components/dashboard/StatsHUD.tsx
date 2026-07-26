@@ -34,14 +34,17 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const monthName = new Date(parseInt(yearStr), parseInt(monthStr) - 1).toLocaleString('default', { month: 'short' });
   const displayLabel = `${monthName} ${yearStr}`;
 
+  const monthlyNet = monthlyIncome - monthlyExpense;
+  const isNetPositive = monthlyNet >= 0;
+
   const stats = [
     {
-      label: 'Wallet Gold (Balance)',
-      value: `${user.currencyGold.toLocaleString()}G`,
-      subtext: 'Ready Capital',
+      label: 'Net Yield (Surplus)',
+      value: `${isNetPositive ? '+' : ''}${monthlyNet.toLocaleString()}G`,
+      subtext: `Net in ${displayLabel}`,
       icon: Coins,
-      color: 'gold' as const,
-      textColor: 'text-neon-amber',
+      color: (isNetPositive ? 'green' : 'red') as 'green' | 'red',
+      textColor: isNetPositive ? 'text-neon-green' : 'text-neon-red',
     },
     {
       label: 'Acquired Loot (Income)',

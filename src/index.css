@@ -153,7 +153,27 @@
   background: var(--color-rpg-dark-card);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(0, 240, 255, 0.12); /* Subtle cyan border */
+  box-shadow: 0 4px 15px rgba(0, 240, 255, 0.02);
+}
+
+/* Futuristic scanner line swipe overlay (very lightweight!) */
+.cyber-scanner-line {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, transparent, rgba(0, 240, 255, 0.5), transparent);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  pointer-events: none;
+  z-index: 900;
+  animation: scanline-sweep 7s linear infinite;
+  opacity: 0.35;
+}
+
+@keyframes scanline-sweep {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
 }
 
 .light .glass-panel {

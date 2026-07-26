@@ -1,10 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ProgressBar } from '../ui/ProgressBar';
-import { Shield, Sparkles, Sword } from 'lucide-react';
+import { Sparkles, Camera } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+
+const AVATAR_PRESETS = [
+  {
+    name: 'Dynamic Vector (System)',
+    url: '',
+    desc: 'Procedural character silhouette with glowing eyes that evolves with level.'
+  },
+  {
+    name: 'Shadow Monarch (Glow)',
+    url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&auto=format&fit=crop&q=80',
+    desc: 'Dark sovereign portrait with purple glowing lightning elements.'
+  },
+  {
+    name: 'Elite Knight (Crimson)',
+    url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=150&auto=format&fit=crop&q=80',
+    desc: 'Fierce crimson warrior plate armor.'
+  },
+  {
+    name: 'Mana Crystal (Energy)',
+    url: 'https://images.unsplash.com/photo-1614036417651-efe5912149d8?w=150&auto=format&fit=crop&q=80',
+    desc: 'Crystalline blue magical energy source.'
+  }
+];
 
 export const LevelHUD: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [photoURLInput, setPhotoURLInput] = useState(user?.photoURL || '');
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!user) return null;
 
@@ -16,6 +45,23 @@ export const LevelHUD: React.FC = () => {
     if (user.level < 5) return 'from-cyan-900 to-slate-900 border-neon-blue';
     if (user.level < 10) return 'from-purple-900 to-slate-900 border-neon-purple';
     return 'from-amber-900 to-slate-900 border-neon-amber';
+  };
+
+  const handleSaveAvatar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSaving(true);
+    try {
+      await updateUserProfile({
+        ...user,
+        photoURL: photoURLInput.trim(),
+      });
+      setShowAvatarModal(false);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to summon new portrait.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -30,8 +76,15 @@ export const LevelHUD: React.FC = () => {
         {/* Outer Rotating Hexagon Ring */}
         <div className="absolute -inset-2 rounded-full border border-dashed border-neon-blue/30 animate-spin-slow pointer-events-none" />
 
-        {/* Profile Avatar Container */}
-        <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getAvatarColor()} border-2 flex items-center justify-center relative shadow-[0_0_15px_rgba(0,240,255,0.15)] overflow-hidden`}>
+        {/* Profile Avatar Clickable Trigger Button */}
+        <button
+          onClick={() => {
+            setPhotoURLInput(user.photoURL || '');
+            setShowAvatarModal(true);
+          }}
+          className="group w-20 h-20 rounded-full bg-gradient-to-br from-slate-900 to-slate-950 border-2 border-neon-blue flex items-center justify-center relative shadow-[0_0_15px_rgba(0,240,255,0.15)] overflow-hidden cursor-pointer focus:outline-none"
+          title="Click to summon character portrait"
+        >
           {user.photoURL ? (
             <img
               src={user.photoURL}
@@ -41,9 +94,16 @@ export const LevelHUD: React.FC = () => {
           ) : (
             <SoloLevelingAvatar level={user.level} />
           )}
+          
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-slate-950/85 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[8px] font-mono text-neon-blue uppercase tracking-widest transition-opacity duration-200">
+            <Camera className="w-4 h-4 mb-0.5" />
+            Summon
+          </div>
+          
           {/* Subtle grid cover on avatar */}
           <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
-        </div>
+        </button>
 
         {/* Level Badge Overlay */}
         <div className="absolute -bottom-1 -right-1 bg-slate-950 border border-slate-800 text-white px-2 py-0.5 rounded font-mono text-[10px] font-bold shadow-md z-10 flex items-center gap-0.5">
@@ -81,6 +141,85 @@ export const LevelHUD: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Avatar Summon/Edit Modal */}
+      <Modal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        title="Summon Portrait Avatar"
+        glowColor={user.level >= 26 ? 'purple' : user.level >= 8 ? 'red' : 'blue'}
+      >
+        <form onSubmit={handleSaveAvatar} className="space-y-4">
+          {errorMsg && (
+            <div className="p-3 bg-neon-red/10 border border-neon-red/30 rounded text-neon-red text-xs">
+              {errorMsg}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
+              Custom Image URL
+            </label>
+            <input
+              type="url"
+              value={photoURLInput}
+              onChange={(e) => setPhotoURLInput(e.target.value)}
+              placeholder="e.g. https://domain.com/avatar.jpg"
+              className="w-full bg-slate-950 border border-slate-800 rounded px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue/50"
+            />
+          </div>
+
+          <div>
+            <span className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2">
+              Select Character Preset
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {AVATAR_PRESETS.map((preset) => {
+                const isActive = photoURLInput === preset.url;
+                return (
+                  <button
+                    type="button"
+                    key={preset.name}
+                    onClick={() => setPhotoURLInput(preset.url)}
+                    className={`p-3 rounded border text-left transition-all duration-200 cursor-pointer ${
+                      isActive
+                        ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                        : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+                    }`}
+                  >
+                    <span className="text-[10px] font-display font-bold uppercase tracking-wider block">
+                      {preset.name}
+                    </span>
+                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide block mt-1 leading-snug">
+                      {preset.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowAvatarModal(false)}
+              className="flex-grow uppercase font-mono text-[10px] tracking-wider"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={saving}
+              className="flex-grow uppercase font-mono text-[10px] tracking-wider"
+            >
+              {saving ? 'Summoning...' : 'Summon Profile'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 };

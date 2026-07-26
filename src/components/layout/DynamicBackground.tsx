@@ -55,7 +55,7 @@ interface VortexParticle {
 export const DynamicBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prefersReducedMotion = useReducedMotion();
-  
+
   // Parallax hooks
   const mouseCoords = useMouseParallax(12);
   const tiltCoords = useDeviceTilt(10);
@@ -63,7 +63,7 @@ export const DynamicBackground: React.FC = () => {
 
   // Time-of-day state
   const [todClass, setTodClass] = useState('tod-night');
-  
+
   // Weather state (Optional: clear, rain, snow, fog)
   const [weather, setWeather] = useState<'clear' | 'rain' | 'snow' | 'fog'>('clear');
 
@@ -76,7 +76,7 @@ export const DynamicBackground: React.FC = () => {
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
-    
+
     // 1. Determine Time-of-day class
     const updateTimeOfDay = () => {
       const hour = new Date().getHours();
@@ -111,7 +111,7 @@ export const DynamicBackground: React.FC = () => {
             setTimeout(() => setLightningActive(false), 50);
           }, 130);
         }
-        
+
         const nextDelay = (20 + Math.random() * 20) * 1000;
         lightningTimer = setTimeout(triggerLightning, nextDelay);
       };
@@ -122,7 +122,7 @@ export const DynamicBackground: React.FC = () => {
         const id = Math.random().toString(36).substring(2, 9);
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
-        
+
         // Build a lightning-like crack path
         const startX = Math.random() * screenWidth;
         const startY = 0;
@@ -194,7 +194,7 @@ export const DynamicBackground: React.FC = () => {
     const particles: Particle[] = [];
     const runes: Rune[] = [];
     let activeDragon: Dragon | null = null;
-    
+
     const vortexParticles: VortexParticle[] = [];
     for (let i = 0; i < 60; i++) {
       vortexParticles.push({
@@ -265,7 +265,7 @@ export const DynamicBackground: React.FC = () => {
       // 1.6 Draw Monarch Silhouette standing under the portal
       const mx = w * 0.15;
       const my = h;
-      
+
       ctx.save();
       ctx.fillStyle = '#020617';
       ctx.shadowBlur = 12;
@@ -315,7 +315,7 @@ export const DynamicBackground: React.FC = () => {
       ctx.beginPath();
       ctx.arc(mx, my - 120, 1.2, 0, Math.PI * 2);
       ctx.fill();
-      
+
       ctx.restore();
 
       // 1. Draw Starfield
@@ -323,7 +323,7 @@ export const DynamicBackground: React.FC = () => {
         if (p.type === 'star') {
           p.x -= p.speed;
           if (p.x < 0) p.x = w;
-          
+
           ctx.save();
           ctx.globalAlpha = p.alpha;
           ctx.fillStyle = p.color;
@@ -455,7 +455,7 @@ export const DynamicBackground: React.FC = () => {
           const d = activeDragon;
           ctx.save();
           ctx.globalAlpha = d.alpha;
-          
+
           // Color based on active time of day/theme, neon cyan glow
           ctx.fillStyle = '#00f0ff';
           ctx.shadowBlur = 6;
@@ -592,7 +592,7 @@ export const DynamicBackground: React.FC = () => {
         {/* Spectral Silhouettes walking across ridge */}
         {!prefersReducedMotion && (
           <div className="absolute bottom-4 w-full h-8 overflow-hidden relative">
-            
+
             {/* Guardian 1: Walking slowly */}
             <motion.div
               animate={{ x: ['-10%', '110%'] }}

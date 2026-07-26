@@ -10,7 +10,7 @@ interface ShadowSoldier {
   key: string;
   name: string;
   role: string;
-  cost: number;
+  levelRequired: number;
   xpValue: number;
   levelOffset: number; // level difference relative to player level
   description: string;
@@ -49,8 +49,8 @@ export const Army: React.FC = () => {
       key: 'igris',
       name: 'Igris',
       role: 'Elite Knight Commander',
-      cost: 1000,
-      xpValue: 150,
+      levelRequired: 5,
+      xpValue: 100,
       levelOffset: 0, // matches player level
       description: 'A crimson-armored knight of absolute loyalty and mastery of the blade.',
       glowColor: 'red',
@@ -60,8 +60,8 @@ export const Army: React.FC = () => {
       key: 'tusk',
       name: 'Tusk',
       role: 'High Orc Shaman',
-      cost: 3000,
-      xpValue: 400,
+      levelRequired: 10,
+      xpValue: 250,
       levelOffset: -2,
       description: 'Master of gravitational magic and gargantuan enlargement spells.',
       glowColor: 'purple',
@@ -71,8 +71,8 @@ export const Army: React.FC = () => {
       key: 'iron',
       name: 'Iron',
       role: 'Shield Vanguard Tank',
-      cost: 5000,
-      xpValue: 700,
+      levelRequired: 15,
+      xpValue: 400,
       levelOffset: -4,
       description: 'A heavy armored tank class that taunts and crushes front line defenses.',
       glowColor: 'blue',
@@ -82,8 +82,8 @@ export const Army: React.FC = () => {
       key: 'beru',
       name: 'Beru',
       role: 'Ant King Commander',
-      cost: 15000,
-      xpValue: 2000,
+      levelRequired: 25,
+      xpValue: 1000,
       levelOffset: 4, // higher level than player!
       description: 'The pinnacle of speed and combat power, capable of devouring skills.',
       glowColor: 'gold',
@@ -92,10 +92,10 @@ export const Army: React.FC = () => {
   ];
 
   const handleExtract = async (soldier: ShadowSoldier) => {
-    if (user.currencyGold < soldier.cost) {
+    if (user.level < soldier.levelRequired) {
       addNotification({
-        title: 'Extraction Denied',
-        message: `Insufficient Gold! Need ${soldier.cost}g to extract this shadow.`,
+        title: 'Extraction Locked',
+        message: `Hunter Level ${soldier.levelRequired} is required to extract ${soldier.name}.`,
         type: 'warning',
       });
       return;
@@ -106,8 +106,8 @@ export const Army: React.FC = () => {
     // Simulate magic extraction delay (Arise theme!)
     setTimeout(async () => {
       try {
-        // Deduct Gold and reward Summoner XP
-        await updateUserStats(50, -soldier.cost);
+        // Reward XP to user profile (milestone trigger)
+        await updateUserStats(soldier.xpValue, 0);
 
         // Update counts
         const updatedCounts = {
@@ -119,9 +119,9 @@ export const Army: React.FC = () => {
 
         addNotification({
           title: 'ARISE!',
-          message: `Successfully extracted shadow [${soldier.name}]. +50 XP!`,
+          message: `Successfully extracted shadow [${soldier.name}]. +${soldier.xpValue} XP!`,
           type: 'achievement',
-          xpGained: 50,
+          xpGained: soldier.xpValue,
         });
       } catch (e) {
         console.error('Failed to extract shadow:', e);
@@ -147,9 +147,9 @@ export const Army: React.FC = () => {
             Monarch's Shadow Army
           </h1>
         </div>
-        <div className="flex items-center gap-3 bg-slate-950 px-4 py-2 border border-slate-900 rounded font-mono text-xs text-neon-amber uppercase tracking-wider w-full md:w-auto justify-between">
-          <span>SUMMONER GOLD:</span>
-          <span className="font-extrabold text-glow-gold">{user.currencyGold.toLocaleString()}G</span>
+        <div className="flex items-center gap-3 bg-slate-950 px-4 py-2 border border-slate-900 rounded font-mono text-xs text-neon-blue uppercase tracking-wider w-full md:w-auto justify-between">
+          <span>SUMMONER STATUS:</span>
+          <span className="font-extrabold text-glow-blue">{user.rankName}</span>
         </div>
       </div>
 
@@ -179,18 +179,19 @@ export const Army: React.FC = () => {
           const count = armyCounts[soldier.key] || 0;
           const isExtracting = extractingKey === soldier.key;
           const cardLevel = Math.max(1, user.level + soldier.levelOffset);
+          const isUnlocked = user.level >= soldier.levelRequired;
 
           return (
             <Card
               key={soldier.key}
-              glowColor={soldier.glowColor}
+              glowColor={isUnlocked ? soldier.glowColor : 'none'}
               clipCorners={true}
-              className="flex flex-col justify-between min-h-[340px]"
+              className={`flex flex-col justify-between min-h-[340px] ${!isUnlocked ? 'opacity-50' : ''}`}
             >
               {/* Card top details */}
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`p-2.5 rounded-lg border-2 flex items-center justify-center bg-gradient-to-br ${soldier.avatarColor}`}>
+                  <div className={`p-2.5 rounded-lg border-2 flex items-center justify-center bg-gradient-to-br ${isUnlocked ? soldier.avatarColor : 'from-slate-900 to-slate-950 border-slate-800 text-slate-600'}`}>
                     <Skull className="w-6 h-6" />
                   </div>
                   <div className="text-right">
@@ -219,7 +220,7 @@ export const Army: React.FC = () => {
                 </div>
 
                 <Button
-                  variant={user.currencyGold >= soldier.cost ? 'primary' : 'secondary'}
+                  variant={isUnlocked ? 'primary' : 'secondary'}
                   size="sm"
                   fullWidth={true}
                   disabled={isExtracting}
@@ -247,7 +248,9 @@ export const Army: React.FC = () => {
                         className="flex items-center justify-center gap-1"
                       >
                         <Sparkles className="w-3 h-3 group-hover:animate-pulse" />
-                        EXTRACT SHADOW ({soldier.cost}g)
+                        {isUnlocked 
+                          ? `ARISE (+${soldier.xpValue}xp)` 
+                          : `LOCK: LV. ${soldier.levelRequired}`}
                       </motion.span>
                     )}
                   </AnimatePresence>

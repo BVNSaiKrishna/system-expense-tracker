@@ -110,6 +110,7 @@ export const DashboardLayout: React.FC = () => {
   return (
     <div className="min-h-screen w-full relative flex overflow-hidden">
       {/* 1. Global Interactive layers */}
+      <div className="cyber-scanner-line" />
       <InteractiveCursor />
       <EnergyWave />
 
@@ -173,10 +174,10 @@ export const DashboardLayout: React.FC = () => {
 
           {/* Bottom HUD: Gold tracker, theme cycler, and exit */}
           <div className="p-4 border-t border-slate-900 space-y-3.5">
-            {/* Quick stats gold */}
-            <div className={`flex items-center gap-2.5 py-2 px-3 bg-slate-950/60 border border-slate-900 rounded font-mono text-xs text-neon-amber ${sidebarCollapsed ? 'justify-center' : ''}`}>
-              <Coins className="w-4 h-4 text-neon-amber animate-spin-slow" />
-              {!sidebarCollapsed && <span>{user.currencyGold.toLocaleString()}G</span>}
+            {/* Quick stats player status */}
+            <div className={`flex items-center gap-2.5 py-2 px-3 bg-slate-950/60 border border-slate-900 rounded font-mono text-[10px] text-neon-blue uppercase tracking-wider ${sidebarCollapsed ? 'justify-center' : ''}`}>
+              <Sparkles className="w-4 h-4 text-neon-blue animate-pulse" />
+              {!sidebarCollapsed && <span>{user.rankName}</span>}
             </div>
 
             {/* Cycle theme */}
