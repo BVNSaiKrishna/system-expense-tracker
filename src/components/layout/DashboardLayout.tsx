@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   Coins,
+  Swords,
 } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
@@ -81,6 +82,7 @@ export const DashboardLayout: React.FC = () => {
     { label: 'Ledger', path: '/transactions', icon: Receipt },
     { label: 'Relics', path: '/cards', icon: CardIcon },
     { label: 'Quests', path: '/goals', icon: Target },
+    { label: 'Army', path: '/army', icon: Swords },
     { label: 'Analytics', path: '/analytics', icon: BarChart3 },
     { label: 'Trophies', path: '/achievements', icon: Trophy },
     { label: 'Throne', path: '/profile', icon: User },
@@ -199,7 +201,7 @@ export const DashboardLayout: React.FC = () => {
       )}
 
       {/* 3. CORE DISPLAY SCREEN CONTENT */}
-      <div className="flex-grow flex flex-col min-h-screen w-full relative overflow-y-auto">
+      <div className="flex-grow flex flex-col min-h-screen w-full relative overflow-y-auto overflow-x-hidden">
         
         {/* MOBILE HOME MOUNTAIN HEADER HERO (Takes up top 45% of home screen on mobile dashboard) */}
         {isMobile && location.pathname === '/' && (
@@ -264,7 +266,7 @@ export const DashboardLayout: React.FC = () => {
       {isMobile && (
         <nav className="fixed bottom-0 left-0 w-full h-16 bg-slate-950/95 border-t border-slate-900 backdrop-blur-md flex justify-around items-center px-2 z-40">
           {menuItems
-            .filter((item) => ['Dashboard', 'Ledger', 'Relics', 'Quests', 'Throne'].includes(item.label))
+            .filter((item) => ['Dashboard', 'Ledger', 'Army', 'Quests', 'Throne'].includes(item.label))
             .map((item) => {
               const isActive = location.pathname === item.path;
               const Icon = item.icon;

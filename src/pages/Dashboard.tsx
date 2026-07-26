@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LevelHUD } from '../components/dashboard/LevelHUD';
 import { StatsHUD } from '../components/dashboard/StatsHUD';
-import { StreakWidget } from '../components/dashboard/StreakWidget';
+import { MonthFilterWidget } from '../components/dashboard/MonthFilterWidget';
 import { RecentTransactions } from '../components/dashboard/RecentTransactions';
+import { DailyQuestsWidget } from '../components/dashboard/DailyQuestsWidget';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -14,6 +15,11 @@ import { PlusCircle, CreditCard, Shield, Sparkles, Terminal } from 'lucide-react
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  
+  // Date selection state
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   
   // Modal states
   const [isTxOpen, setIsTxOpen] = useState(false);
@@ -44,7 +50,7 @@ export const Dashboard: React.FC = () => {
       <LevelHUD />
 
       {/* 3. Core Balances Statistics */}
-      <StatsHUD />
+      <StatsHUD selectedMonth={selectedMonth} />
 
       {/* 4. Action Console Widget */}
       <Card glowColor="none" clipCorners={true} className="p-4 bg-slate-950/50">
@@ -75,9 +81,9 @@ export const Dashboard: React.FC = () => {
       {/* 5. Streak Timeline & Recent Transactions split layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Streak Widget: Fullwidth Row on mobile, Left Col on desktop */}
+        {/* Month Navigator Widget instead of Streak */}
         <div className="lg:col-span-3">
-          <StreakWidget />
+          <MonthFilterWidget selectedMonth={selectedMonth} onChange={setSelectedMonth} />
         </div>
 
         {/* Recent Transactions: Left */}
@@ -85,30 +91,10 @@ export const Dashboard: React.FC = () => {
           <RecentTransactions />
         </div>
 
-        {/* Short motivational tips Card: Right */}
-        <Card glowColor="none" className="flex flex-col justify-between">
-          <div>
-            <h3 className="text-xs font-display font-black text-white uppercase tracking-widest pb-3 border-b border-slate-900 mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-neon-blue" />
-              Guild Codex Tips
-            </h3>
-            
-            <div className="space-y-4 text-xs font-mono text-slate-400 uppercase tracking-wide leading-relaxed">
-              <div className="p-3 bg-slate-950/40 border border-slate-900 rounded">
-                <span className="text-[9px] text-neon-blue font-bold block mb-1">Quest Multiplier</span>
-                Always log daily expenses. Consecutive days increase your flame streak, unlocking experience point boosts.
-              </div>
-              <div className="p-3 bg-slate-950/40 border border-slate-900 rounded">
-                <span className="text-[9px] text-neon-purple font-bold block mb-1">Relic Buffs</span>
-                Keep credit utilization below 30% to maintain your passive "Discipline" aura (+5% XP multiplier).
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[8px] font-mono text-slate-500 uppercase text-center mt-6 tracking-widest">
-            Codex database: compiled
-          </div>
-        </Card>
+        {/* Daily Quests Widget: Right Col */}
+        <div className="lg:col-span-1">
+          <DailyQuestsWidget />
+        </div>
 
       </div>
 

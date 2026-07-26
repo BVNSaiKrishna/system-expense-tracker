@@ -2,28 +2,40 @@ import React, { useState } from 'react';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { Button } from '../ui/Button';
-import { Calendar, AlertCircle } from 'lucide-react';
+import {
+  Calendar,
+  AlertCircle,
+  Utensils,
+  Sword,
+  Receipt,
+  FlaskConical,
+  Compass,
+  Beer,
+  Plus,
+  Smartphone,
+  CreditCard,
+  Coins,
+  Swords,
+} from 'lucide-react';
 
 interface TransactionFormProps {
   onSuccess: () => void;
 }
 
 const EXPENSE_CATEGORIES = [
-  'Provisions (Food)',
-  'Gear (Equipment/Clothes)',
-  'Guild Fees (Rent/Bills)',
-  'Elixirs (Health/Medical)',
-  'Travel (Transportation)',
-  'Entertainment (Tavern/Games)',
-  'Other Upkeep',
+  { name: 'Provisions (Food)', icon: Utensils },
+  { name: 'Gear (Equipment)', icon: Sword },
+  { name: 'Guild Fees (Bills)', icon: Receipt },
+  { name: 'Elixirs (Medical)', icon: FlaskConical },
+  { name: 'Travel (Transport)', icon: Compass },
+  { name: 'Tavern (Games)', icon: Beer },
 ];
 
 const INCOME_CATEGORIES = [
-  'Guild Salary',
-  'Dungeon Loot (Bonus)',
-  'Investment Yield',
-  'Side Quests (Freelance)',
-  'Other Gains',
+  { name: 'Guild Salary', icon: Receipt },
+  { name: 'Dungeon Loot', icon: Swords },
+  { name: 'Investment Yield', icon: Coins },
+  { name: 'Side Quests', icon: Compass },
 ];
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
@@ -32,7 +44,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
 
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].name);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -48,7 +60,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
   const handleTypeChange = (newType: 'income' | 'expense') => {
     setType(newType);
     setIsCustomCategory(false);
-    setCategory(newType === 'expense' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
+    setCategory(newType === 'expense' ? EXPENSE_CATEGORIES[0].name : INCOME_CATEGORIES[0].name);
     setPaymentMethod('Cash');
     setIsCustomPayment(false);
     setCardId('');
@@ -201,29 +213,52 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
         />
       </div>
 
-      {/* 4. Category selection dropdown */}
+      {/* 4. Category selection Grid */}
       <div>
-        <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
+        <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2">
           Registry Category
         </label>
-        <select
-          value={isCustomCategory ? 'CUSTOM_CATEGORY' : category}
-          onChange={(e) => handleCategoryChange(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-neon-blue cursor-pointer"
-        >
-          {type === 'expense'
-            ? EXPENSE_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))
-            : INCOME_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-          <option value="CUSTOM_CATEGORY">➕ Custom Log Type...</option>
-        </select>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => {
+            const CatIcon = cat.icon;
+            const isSelected = !isCustomCategory && category === cat.name;
+            return (
+              <button
+                type="button"
+                key={cat.name}
+                onClick={() => {
+                  setIsCustomCategory(false);
+                  setCategory(cat.name);
+                }}
+                className={`flex items-center gap-2 p-2.5 rounded border text-left cursor-pointer transition-all duration-200 ${
+                  isSelected
+                    ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                    : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+                }`}
+              >
+                <CatIcon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-[10px] font-mono uppercase tracking-wide truncate">
+                  {cat.name.replace(/\s*\(.*\)/, '')}
+                </span>
+              </button>
+            );
+          })}
+          {/* Custom Category Button */}
+          <button
+            type="button"
+            onClick={() => handleCategoryChange('CUSTOM_CATEGORY')}
+            className={`flex items-center gap-2 p-2.5 rounded border text-left cursor-pointer transition-all duration-200 ${
+              isCustomCategory
+                ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+            }`}
+          >
+            <Plus className="w-4 h-4 flex-shrink-0" />
+            <span className="text-[10px] font-mono uppercase tracking-wide truncate">
+              Custom
+            </span>
+          </button>
+        </div>
       </div>
 
       {isCustomCategory && (
@@ -257,22 +292,72 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
         </div>
       </div>
 
-      {/* 6. Payment Channel selector */}
+      {/* 6. Payment Channel selector Grid */}
       <div>
-        <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">
+        <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2">
           Payment Channel
         </label>
-        <select
-          value={isCustomPayment ? 'CUSTOM_PAYMENT' : paymentMethod}
-          onChange={(e) => handlePaymentMethodChange(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-neon-blue cursor-pointer"
-        >
-          <option value="Cash">Cash (Wallet Gold)</option>
-          <option value="UPI">UPI (Wallet Gold)</option>
-          <option value="Debit Card">Debit Card (Wallet Gold)</option>
-          {type === 'expense' && <option value="credit">Credit Card Relic</option>}
-          <option value="CUSTOM_PAYMENT">➕ Custom Channel...</option>
-        </select>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { key: 'Cash', label: 'Cash (Gold)', icon: Coins },
+            { key: 'UPI', label: 'UPI (Gold)', icon: Smartphone },
+            { key: 'Debit Card', label: 'Debit (Gold)', icon: CreditCard },
+          ].map((ch) => {
+            const ChIcon = ch.icon;
+            const isSelected = !isCustomPayment && paymentMethod === ch.key;
+            return (
+              <button
+                type="button"
+                key={ch.key}
+                onClick={() => handlePaymentMethodChange(ch.key)}
+                className={`flex items-center gap-2 p-2.5 rounded border text-left cursor-pointer transition-all duration-200 ${
+                  isSelected
+                    ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                    : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+                }`}
+              >
+                <ChIcon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-[10px] font-mono uppercase tracking-wide truncate">
+                  {ch.label}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Credit Card Relic */}
+          {type === 'expense' && (
+            <button
+              type="button"
+              onClick={() => handlePaymentMethodChange('credit')}
+              className={`flex items-center gap-2 p-2.5 rounded border text-left cursor-pointer transition-all duration-200 ${
+                paymentMethod === 'credit'
+                  ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                  : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+              }`}
+            >
+              <CreditCard className="w-4 h-4 flex-shrink-0" />
+              <span className="text-[10px] font-mono uppercase tracking-wide truncate font-bold">
+                Relic Card
+              </span>
+            </button>
+          )}
+
+          {/* Custom payment method button */}
+          <button
+            type="button"
+            onClick={() => handlePaymentMethodChange('CUSTOM_PAYMENT')}
+            className={`flex items-center gap-2 p-2.5 rounded border text-left cursor-pointer transition-all duration-200 ${
+              isCustomPayment
+                ? 'border-neon-blue bg-neon-blue/15 text-neon-blue shadow-[0_0_10px_rgba(0,240,255,0.15)]'
+                : 'border-slate-900 bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-950/70'
+            }`}
+          >
+            <Plus className="w-4 h-4 flex-shrink-0" />
+            <span className="text-[10px] font-mono uppercase tracking-wide truncate">
+              Custom
+            </span>
+          </button>
+        </div>
       </div>
 
       {isCustomPayment && (

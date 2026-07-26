@@ -17,6 +17,7 @@ export const useCreditCards = () => {
     queryKey: ['creditCards', userId],
     queryFn: () => dbService.getCreditCards(userId, isGuest),
     enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   // Helper to determine card rarity tier based on limit

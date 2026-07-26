@@ -5,19 +5,19 @@ import { useGoals } from '../../hooks/useGoals';
 import { Card } from '../ui/Card';
 import { Coins, ArrowUpRight, ArrowDownRight, Archive } from 'lucide-react';
 
-export const StatsHUD: React.FC = () => {
+interface StatsHUDProps {
+  selectedMonth: string;
+}
+
+export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const { user } = useAuth();
   const { transactions } = useTransactions();
   const { goals } = useGoals();
 
   if (!user) return null;
 
-  // Calculate current month's dates
-  const now = new Date();
-  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
   // Filter transactions for this month
-  const monthTxs = transactions.filter((t) => t.date.startsWith(currentMonthStr));
+  const monthTxs = transactions.filter((t) => t.date.startsWith(selectedMonth));
 
   const monthlyIncome = monthTxs
     .filter((t) => t.type === 'income')
@@ -28,6 +28,11 @@ export const StatsHUD: React.FC = () => {
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalSavings = goals.reduce((sum, g) => sum + g.currentAmount, 0);
+
+  // Format month label (e.g., "2026-07" -> "Jul 2026")
+  const [yearStr, monthStr] = selectedMonth.split('-');
+  const monthName = new Date(parseInt(yearStr), parseInt(monthStr) - 1).toLocaleString('default', { month: 'short' });
+  const displayLabel = `${monthName} ${yearStr}`;
 
   const stats = [
     {
@@ -41,7 +46,7 @@ export const StatsHUD: React.FC = () => {
     {
       label: 'Acquired Loot (Income)',
       value: `+${monthlyIncome.toLocaleString()}G`,
-      subtext: 'This Month',
+      subtext: `In ${displayLabel}`,
       icon: ArrowUpRight,
       color: 'green' as const,
       textColor: 'text-neon-green',
@@ -49,7 +54,7 @@ export const StatsHUD: React.FC = () => {
     {
       label: 'System Upkeep (Expense)',
       value: `-${monthlyExpense.toLocaleString()}G`,
-      subtext: 'This Month',
+      subtext: `In ${displayLabel}`,
       icon: ArrowDownRight,
       color: 'red' as const,
       textColor: 'text-neon-red',

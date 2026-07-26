@@ -43,6 +43,15 @@ interface Dragon {
   direction: 1 | -1;
 }
 
+interface VortexParticle {
+  angle: number;
+  radius: number;
+  speed: number;
+  size: number;
+  alpha: number;
+  color: string;
+}
+
 export const DynamicBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -163,9 +172,12 @@ export const DynamicBackground: React.FC = () => {
     let w = (canvas.width = window.innerWidth);
     let h = (canvas.height = window.innerHeight);
 
+    const vortexCenter = { x: w * 0.15, y: h * 0.45 };
     const handleResize = () => {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
+      vortexCenter.x = w * 0.15;
+      vortexCenter.y = h * 0.45;
     };
     window.addEventListener('resize', handleResize);
 
@@ -175,6 +187,18 @@ export const DynamicBackground: React.FC = () => {
     const particles: Particle[] = [];
     const runes: Rune[] = [];
     let activeDragon: Dragon | null = null;
+    
+    const vortexParticles: VortexParticle[] = [];
+    for (let i = 0; i < 60; i++) {
+      vortexParticles.push({
+        angle: Math.random() * Math.PI * 2,
+        radius: Math.random() * 120 + 20,
+        speed: Math.random() * 0.015 + 0.005,
+        size: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.8 + 0.2,
+        color: Math.random() > 0.4 ? '#00f0ff' : '#9d4edd',
+      });
+    }
 
     // Initialize 80 stars
     for (let i = 0; i < 80; i++) {
@@ -206,6 +230,86 @@ export const DynamicBackground: React.FC = () => {
     // Render loop
     const render = () => {
       ctx.clearRect(0, 0, w, h);
+
+      // 1.5 Draw Swirling Vortex Portal
+      vortexParticles.forEach((vp) => {
+        vp.angle += vp.speed;
+        vp.radius -= 0.35;
+        if (vp.radius <= 5) {
+          vp.radius = Math.random() * 100 + 80;
+          vp.alpha = Math.random() * 0.8 + 0.2;
+          vp.angle = Math.random() * Math.PI * 2;
+        }
+
+        const px = vortexCenter.x + Math.cos(vp.angle) * vp.radius;
+        const py = vortexCenter.y + Math.sin(vp.angle) * vp.radius;
+
+        ctx.save();
+        ctx.globalAlpha = vp.alpha * 0.65;
+        ctx.fillStyle = vp.color;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = vp.color;
+        ctx.beginPath();
+        ctx.arc(px, py, vp.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 1.6 Draw Monarch Silhouette standing under the portal
+      const mx = w * 0.15;
+      const my = h;
+      
+      ctx.save();
+      ctx.fillStyle = '#020617';
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#00f0ff';
+
+      const waveTime = Date.now() * 0.003;
+      const capeWave = Math.sin(waveTime) * 4;
+
+      ctx.beginPath();
+      ctx.moveTo(mx - 20, my);
+      ctx.lineTo(mx - 15, my - 60);
+      ctx.lineTo(mx - 22, my - 100);
+      ctx.lineTo(mx - 4, my - 110);
+      ctx.lineTo(mx - 8, my - 124);
+      ctx.lineTo(mx - 2, my - 128);
+      ctx.lineTo(mx, my - 134);
+      ctx.lineTo(mx + 3, my - 128);
+      ctx.lineTo(mx + 8, my - 124);
+      ctx.lineTo(mx + 4, my - 110);
+      ctx.lineTo(mx + 22, my - 100);
+      ctx.lineTo(mx + 15, my - 60);
+      ctx.lineTo(mx + 20, my);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cape flapping left
+      ctx.beginPath();
+      ctx.moveTo(mx - 15, my - 95);
+      ctx.quadraticCurveTo(mx - 35 + capeWave, my - 55, mx - 45 + capeWave * 1.5, my - 10);
+      ctx.quadraticCurveTo(mx - 25 + capeWave, my - 25, mx - 10, my - 50);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cape flapping right
+      ctx.beginPath();
+      ctx.moveTo(mx + 15, my - 95);
+      ctx.quadraticCurveTo(mx + 35 - capeWave, my - 55, mx + 45 - capeWave * 1.5, my - 10);
+      ctx.quadraticCurveTo(mx + 25 - capeWave, my - 25, mx + 10, my - 50);
+      ctx.closePath();
+      ctx.fill();
+
+      // Monarch Sigil Glow
+      ctx.fillStyle = '#00f0ff';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00f0ff';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(mx, my - 120, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
 
       // 1. Draw Starfield
       particles.forEach((p) => {

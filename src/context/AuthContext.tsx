@@ -35,14 +35,15 @@ export const useAuth = () => {
   return context;
 };
 
-// RPG Ranks helper based on level
+// RPG Ranks helper based on level (Solo Leveling Ranks)
 export const getRankName = (level: number): string => {
-  if (level < 3) return 'Apprentice Saver';
-  if (level < 6) return 'Frugal Squire';
-  if (level < 10) return 'Budget Knight';
-  if (level < 15) return 'Vault Sentinel';
-  if (level < 20) return 'Gold Paladin';
-  return 'Wealth Archmage';
+  if (level < 4) return 'E-Rank Hunter';
+  if (level < 8) return 'D-Rank Hunter';
+  if (level < 13) return 'C-Rank Hunter';
+  if (level < 19) return 'B-Rank Hunter';
+  if (level < 26) return 'A-Rank Hunter';
+  if (level < 36) return 'S-Rank Hunter';
+  return 'National Level Hunter';
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

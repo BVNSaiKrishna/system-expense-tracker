@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/dbService';
-import { Transaction } from '../types';
+import { Transaction, CreditCard } from '../types';
 import { useNotification } from '../components/layout/NotificationSystem';
 
 export const useTransactions = () => {
@@ -17,6 +17,7 @@ export const useTransactions = () => {
     queryKey: ['transactions', userId],
     queryFn: () => dbService.getTransactions(userId, isGuest),
     enabled: !!userId,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   // MUTATION: Add transaction
@@ -34,7 +35,8 @@ export const useTransactions = () => {
         if (newTx.cardId) {
           // Charged to Credit Card Relic
           try {
-            const cards = await dbService.getCreditCards(userId, isGuest);
+            const cards = queryClient.getQueryData<CreditCard[]>(['creditCards', userId]) || 
+                          await dbService.getCreditCards(userId, isGuest);
             const targetCard = cards.find((c) => c.id === newTx.cardId);
             if (targetCard) {
               const updatedCard = {
@@ -95,7 +97,8 @@ export const useTransactions = () => {
         if (deletedTx.cardId) {
           // Refund Credit Card Relic
           try {
-            const cards = await dbService.getCreditCards(userId, isGuest);
+            const cards = queryClient.getQueryData<CreditCard[]>(['creditCards', userId]) || 
+                          await dbService.getCreditCards(userId, isGuest);
             const targetCard = cards.find((c) => c.id === deletedTx.cardId);
             if (targetCard) {
               const updatedCard = {

@@ -15,6 +15,7 @@ const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Achievements = React.lazy(() => import('./pages/Achievements'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Profile = React.lazy(() => import('./pages/Profile'));
+const Army = React.lazy(() => import('./pages/Army'));
 const Auth = React.lazy(() => import('./pages/Auth'));
 
 const queryClient = new QueryClient({
@@ -70,6 +71,7 @@ const AppContent: React.FC = () => {
             <Route path="transactions" element={<Transactions />} />
             <Route path="cards" element={<Cards />} />
             <Route path="goals" element={<Goals />} />
+            <Route path="army" element={<Army />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="achievements" element={<Achievements />} />
             <Route path="settings" element={<Settings />} />
