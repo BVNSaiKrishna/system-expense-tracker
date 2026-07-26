@@ -88,79 +88,86 @@ export const DynamicBackground: React.FC = () => {
     updateTimeOfDay();
     const todInterval = setInterval(updateTimeOfDay, 60000);
 
-    // 2. Slow Weather Shifter (change weather every 60s)
-    const weathers: Array<'clear' | 'rain' | 'snow' | 'fog'> = ['clear', 'rain', 'snow', 'fog'];
-    const weatherInterval = setInterval(() => {
-      const randomWeather = weathers[Math.floor(Math.random() * weathers.length)];
-      setWeather(randomWeather);
-    }, 60000);
+    // Weather and visual effects are only activated on Desktop to keep mobile devices extremely lightweight
+    let weatherInterval: any = null;
+    let lightningTimer: any = null;
+    let cracksTimer: any = null;
 
-    // 3. Lightning generator (every 20 to 40 seconds)
-    const triggerLightning = () => {
-      if (Math.random() > 0.4) {
-        setLightningActive(true);
-        setTimeout(() => setLightningActive(false), 80);
-        setTimeout(() => {
+    if (isDesktop) {
+      // 2. Slow Weather Shifter (change weather every 60s)
+      const weathers: Array<'clear' | 'rain' | 'snow' | 'fog'> = ['clear', 'rain', 'snow', 'fog'];
+      weatherInterval = setInterval(() => {
+        const randomWeather = weathers[Math.floor(Math.random() * weathers.length)];
+        setWeather(randomWeather);
+      }, 60000);
+
+      // 3. Lightning generator (every 20 to 40 seconds)
+      const triggerLightning = () => {
+        if (Math.random() > 0.4) {
           setLightningActive(true);
-          setTimeout(() => setLightningActive(false), 50);
-        }, 130);
-      }
-      
-      const nextDelay = (20 + Math.random() * 20) * 1000;
-      setTimeout(triggerLightning, nextDelay);
-    };
-    const lightningTimer = setTimeout(triggerLightning, 25000);
+          setTimeout(() => setLightningActive(false), 80);
+          setTimeout(() => {
+            setLightningActive(true);
+            setTimeout(() => setLightningActive(false), 50);
+          }, 130);
+        }
+        
+        const nextDelay = (20 + Math.random() * 20) * 1000;
+        lightningTimer = setTimeout(triggerLightning, nextDelay);
+      };
+      lightningTimer = setTimeout(triggerLightning, 25000);
 
-    // 4. Energy cracks generator (random intervals)
-    const triggerCracks = () => {
-      const id = Math.random().toString(36).substring(2, 9);
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-      
-      // Build a lightning-like crack path
-      const startX = Math.random() * screenWidth;
-      const startY = 0;
-      const points = [{ x: startX, y: startY }];
-      let currentX = startX;
-      let currentY = startY;
+      // 4. Energy cracks generator (random intervals)
+      const triggerCracks = () => {
+        const id = Math.random().toString(36).substring(2, 9);
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // Build a lightning-like crack path
+        const startX = Math.random() * screenWidth;
+        const startY = 0;
+        const points = [{ x: startX, y: startY }];
+        let currentX = startX;
+        let currentY = startY;
 
-      while (currentY < screenHeight) {
-        currentY += Math.random() * 80 + 30;
-        currentX += (Math.random() - 0.5) * 60;
-        points.push({ x: currentX, y: currentY });
-      }
+        while (currentY < screenHeight) {
+          currentY += Math.random() * 80 + 30;
+          currentX += (Math.random() - 0.5) * 60;
+          points.push({ x: currentX, y: currentY });
+        }
 
-      setCracks((prev) => [...prev, { id, points, alpha: 0.8 }]);
+        setCracks((prev) => [...prev, { id, points, alpha: 0.8 }]);
 
-      // Fade out crack slowly
-      const fadeInterval = setInterval(() => {
-        setCracks((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, alpha: c.alpha - 0.05 } : c))
-        );
-      }, 80);
+        // Fade out crack slowly
+        const fadeInterval = setInterval(() => {
+          setCracks((prev) =>
+            prev.map((c) => (c.id === id ? { ...c, alpha: c.alpha - 0.05 } : c))
+          );
+        }, 80);
 
-      setTimeout(() => {
-        clearInterval(fadeInterval);
-        setCracks((prev) => prev.filter((c) => c.id !== id));
-      }, 1600);
+        setTimeout(() => {
+          clearInterval(fadeInterval);
+          setCracks((prev) => prev.filter((c) => c.id !== id));
+        }, 1600);
 
-      const nextDelay = (15 + Math.random() * 20) * 1000;
-      setTimeout(triggerCracks, nextDelay);
-    };
-    const cracksTimer = setTimeout(triggerCracks, 10000);
+        const nextDelay = (15 + Math.random() * 20) * 1000;
+        cracksTimer = setTimeout(triggerCracks, nextDelay);
+      };
+      cracksTimer = setTimeout(triggerCracks, 10000);
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
       clearInterval(todInterval);
-      clearInterval(weatherInterval);
-      clearTimeout(lightningTimer);
-      clearTimeout(cracksTimer);
+      if (weatherInterval) clearInterval(weatherInterval);
+      if (lightningTimer) clearTimeout(lightningTimer);
+      if (cracksTimer) clearTimeout(cracksTimer);
     };
-  }, []);
+  }, [isDesktop]);
 
   // CANVAS DRAWING (Stars, weather, runes)
   useEffect(() => {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || !isDesktop) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -499,7 +506,7 @@ export const DynamicBackground: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animFrame);
     };
-  }, [prefersReducedMotion, weather]);
+  }, [prefersReducedMotion, weather, isDesktop]);
 
   // Combine Parallax Coordinates
   const px = isDesktop ? mouseCoords.x : tiltCoords.x;
@@ -516,7 +523,7 @@ export const DynamicBackground: React.FC = () => {
       <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none animate-grid-move" />
 
       {/* Layer 2: Starfield / Weather Canvas */}
-      {!prefersReducedMotion && (
+      {!prefersReducedMotion && isDesktop && (
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full pointer-events-none mix-blend-screen"
@@ -524,7 +531,7 @@ export const DynamicBackground: React.FC = () => {
       )}
 
       {/* Layer 3: Neon Fog Radial Sheets */}
-      {!prefersReducedMotion && (
+      {!prefersReducedMotion && isDesktop && (
         <>
           <motion.div
             className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-neon-blue/8 blur-[120px]"
