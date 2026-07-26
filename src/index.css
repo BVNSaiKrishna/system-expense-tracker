@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Orbitron', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  --color-neon-blue: #00f0ff;
+  --color-neon-cyan: #00e5ff;
+  --color-neon-purple: #9d4edd;
+  --color-neon-pink: #ff007f;
+  --color-neon-green: #39ff14;
+  --color-neon-amber: #ffb703;
+  --color-neon-red: #ff3c00;
+
+  --color-rpg-dark-bg: #030712;
+  --color-rpg-dark-card: rgba(11, 15, 30, 0.65);
+  --color-rpg-light-bg: #f8fafc;
+  --color-rpg-light-card: rgba(255, 255, 255, 0.75);
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-scanline: scanline 8s linear infinite;
+  --animate-flicker: crt-flicker 0.15s ease-in-out infinite;
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-wave-slow: wave-move 20s linear infinite;
+  --animate-grid-move: grid-scroll 25s linear infinite;
+}
+
+/* Custom Keyframes */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.985; }
+  50% { opacity: 0.995; }
+  100% { opacity: 0.985; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes wave-move {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes grid-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 40px; }
+}
+
+@keyframes glare-swipe {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  100% { transform: translateX(150%) skewX(-25deg); }
+}
+
+@keyframes border-glow-pulse {
+  0%, 100% { border-color: rgba(0, 240, 255, 0.2); box-shadow: 0 0 5px rgba(0, 240, 255, 0.05); }
+  50% { border-color: rgba(0, 240, 255, 0.6); box-shadow: 0 0 15px rgba(0, 240, 255, 0.25); }
+}
+
+@keyframes xp-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Custom Base Layer overrides */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-rpg-dark-bg);
+    color: #e2e8f0;
+    min-height: 100vh;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Time-Of-Day Gradient Overlays */
+.tod-morning {
+  background: radial-gradient(circle at bottom, rgba(0, 229, 255, 0.15) 0%, rgba(3, 7, 18, 1) 70%);
+}
+.tod-afternoon {
+  background: radial-gradient(circle at top right, rgba(0, 240, 255, 0.15) 0%, rgba(3, 7, 18, 1) 75%);
+}
+.tod-evening {
+  background: radial-gradient(circle at bottom right, rgba(157, 78, 221, 0.18) 0%, rgba(3, 7, 18, 1) 70%);
+}
+.tod-night {
+  background: radial-gradient(circle at center, rgba(11, 15, 40, 0.6) 0%, rgba(3, 7, 18, 1) 80%);
+}
+
+/* Interactive Cursor Hider for Desktop */
+@media (min-width: 1024px) {
+  .custom-cursor-active, .custom-cursor-active * {
+    cursor: none !important;
+  }
+}
+
+/* Scanlines overlay */
+.scanlines::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+/* Hologram Glow Effects */
+.hologram-glow-blue {
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 10px rgba(0, 240, 255, 0.05);
+}
+.hologram-glow-purple {
+  border-color: rgba(157, 78, 221, 0.3);
+  box-shadow: 0 0 15px rgba(157, 78, 221, 0.15), inset 0 0 10px rgba(157, 78, 221, 0.05);
+}
+.hologram-glow-green {
+  border-color: rgba(57, 255, 20, 0.3);
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.15), inset 0 0 10px rgba(57, 255, 20, 0.05);
+}
+.hologram-glow-red {
+  border-color: rgba(255, 60, 0, 0.3);
+  box-shadow: 0 0 15px rgba(255, 60, 0, 0.15), inset 0 0 10px rgba(255, 60, 0, 0.05);
+}
+.hologram-glow-gold {
+  border-color: rgba(255, 183, 3, 0.3);
+  box-shadow: 0 0 15px rgba(255, 183, 3, 0.15), inset 0 0 10px rgba(255, 183, 3, 0.05);
+}
+
+/* Glowing text */
+.text-glow-blue { text-shadow: 0 0 8px rgba(0, 240, 255, 0.6); }
+.text-glow-purple { text-shadow: 0 0 8px rgba(157, 78, 221, 0.6); }
+.text-glow-green { text-shadow: 0 0 8px rgba(57, 255, 20, 0.6); }
+.text-glow-gold { text-shadow: 0 0 8px rgba(255, 183, 3, 0.6); }
+.text-glow-red { text-shadow: 0 0 8px rgba(255, 60, 0, 0.6); }
+
+/* Glass Panels */
+.glass-panel {
+  background: var(--color-rpg-dark-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.light .glass-panel {
+  background: var(--color-rpg-light-card);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+}
+
+/* Sci-fi System Grid Pattern */
+.bg-grid-pattern {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+}
+
+.light .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(3, 7, 18, 0.5);
+}
+.light ::-webkit-scrollbar-track {
+  background: rgba(248, 250, 252, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.6);
+}
+
+/* Clip-path for futuristic RPG card corners */
+.clip-hud-corners {
+  clip-path: polygon(
+    0 12px, 
+    12px 0, 
+    calc(100% - 12px) 0, 
+    100% 12px, 
+    100% calc(100% - 12px), 
+    calc(100% - 12px) 100%, 
+    12px 100%, 
+    0 calc(100% - 12px)
+  );
+}
+
+/* Living Card Border Pulse */
+.card-energy-border {
+  animation: border-glow-pulse 6s ease-in-out infinite;
+}
+
+/* Glare Wipe Reflection styling */
+.glare-container {
+  position: relative;
+  overflow: hidden;
+}
+.glare-swipe::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: translateX(-150%) skewX(-25deg);
+  pointer-events: none;
+  z-index: 5;
+}
+.glare-container:hover .glare-swipe::after {
+  animation: glare-swipe 1.5s ease-out;
+}
+
+/* Shimmering XP bar */
+.xp-shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 240, 255, 0.2) 25%,
+    rgba(0, 240, 255, 0.6) 37%,
+    rgba(0, 240, 255, 0.2) 63%
+  );
+  background-size: 400% 100%;
+  animation: xp-shimmer 1.8s ease infinite;
+}
+
+/* 3D hover layout tilt properties */
+.perspective-container {
+  perspective: 1000px;
+}
+.perspective-tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease;
+}
