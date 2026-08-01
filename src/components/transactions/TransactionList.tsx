@@ -2,9 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useTransactions } from '../../hooks/useTransactions';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
+import { TransactionForm } from './TransactionForm';
+import { Transaction } from '../../types';
 import {
   Search,
   Trash2,
+  Edit2,
   Download,
   CreditCard,
   Utensils,
@@ -50,6 +54,8 @@ const getCategoryColor = (category: string) => {
 
 export const TransactionList: React.FC = () => {
   const { transactions, deleteTransaction, isLoading } = useTransactions();
+
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -324,11 +330,22 @@ export const TransactionList: React.FC = () => {
                                   </div>
                                 </div>
 
-                                <span className={`font-mono font-bold ${
-                                  isIncome ? 'text-[#22C55E]' : 'text-slate-200'
-                                }`}>
-                                  {isIncome ? '+' : '-'}{tx.amount.toLocaleString()} G
-                                </span>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`font-mono font-bold ${
+                                    isIncome ? 'text-[#22C55E]' : 'text-slate-200'
+                                  }`}>
+                                    {isIncome ? '+' : '-'}{tx.amount.toLocaleString()} G
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingTx(tx);
+                                    }}
+                                    className="p-1 rounded border border-white/5 bg-slate-950/20 hover:border-[#00C8FF]/30 hover:bg-[#00C8FF]/10 text-slate-500 hover:text-[#00C8FF] cursor-pointer transition-all duration-200"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </motion.div>
                             </div>
                           );
@@ -342,6 +359,13 @@ export const TransactionList: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editingTx} onClose={() => setEditingTx(null)} title="Reforge Operation Log">
+        {editingTx && (
+          <TransactionForm transactionToEdit={editingTx} onSuccess={() => setEditingTx(null)} />
+        )}
+      </Modal>
     </Card>
   );
 };

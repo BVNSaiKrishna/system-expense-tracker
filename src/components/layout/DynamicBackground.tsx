@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import backgroundUrl from '../../assets/background.png';
 
 interface Particle {
   x: number;
@@ -233,14 +234,27 @@ export const DynamicBackground: React.FC = () => {
 
   return (
     <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden bg-[#090B12] transition-colors duration-1000">
-      {/* Layer 1: Animated shifting radial gradients (CSS driven) */}
+      {/* Layer 1: Image Background with cinematic dark gradient overlay */}
       <div
-        className="absolute inset-0 bg-[#090B12] pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            radial-gradient(circle at 10% 20%, rgba(0, 200, 255, 0.04) 0%, transparent 45%),
-            radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(17, 24, 39, 0.95) 0%, #090B12 100%)
+            linear-gradient(to bottom, rgba(9, 11, 18, 0.84), rgba(9, 11, 18, 0.94)),
+            url(${backgroundUrl})
+          `,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 20%',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+
+      {/* Layer 1.5: Shifting neon gradients */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 10% 20%, rgba(0, 200, 255, 0.08) 0%, transparent 45%),
+            radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 50%)
           `,
           animation: animationsEnabled ? 'pulse-slow 20s infinite ease-in-out' : 'none',
         }}
@@ -253,7 +267,7 @@ export const DynamicBackground: React.FC = () => {
       />
 
       {/* Subtle bottom vignette to blend content area */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_30%,rgba(9,11,18,0.4)_100%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_30%,rgba(9,11,18,0.5)_100%)]" />
     </div>
   );
 };

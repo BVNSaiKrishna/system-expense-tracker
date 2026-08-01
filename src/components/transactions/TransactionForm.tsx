@@ -22,8 +22,11 @@ import {
   Building
 } from 'lucide-react';
 
+import { Transaction } from '../../types';
+
 interface TransactionFormProps {
   onSuccess: () => void;
+  transactionToEdit?: Transaction | null;
 }
 
 const EXPENSE_CATEGORIES = [
@@ -63,21 +66,53 @@ function CompassIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) => {
-  const { addTransaction } = useTransactions();
+export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, transactionToEdit }) => {
+  const { addTransaction, updateTransaction } = useTransactions();
   const { creditCards } = useCreditCards();
 
-  const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].name);
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
-  const [customCategory, setCustomCategory] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [customPayment, setCustomPayment] = useState('');
-  const [isCustomPayment, setIsCustomPayment] = useState(false);
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [cardId, setCardId] = useState('');
+  const isEditing = !!transactionToEdit;
+
+  const [type, setType] = useState<'income' | 'expense'>(transactionToEdit?.type || 'expense');
+  const [amount, setAmount] = useState(transactionToEdit?.amount ? transactionToEdit.amount.toString() : '');
+  
+  // Categorization logic
+  const isCategoryCustom = () => {
+    if (!transactionToEdit) return false;
+    const presets = transactionToEdit.type === 'expense' 
+      ? EXPENSE_CATEGORIES.map(c => c.name) 
+      : INCOME_CATEGORIES.map(c => c.name);
+    return !presets.includes(transactionToEdit.category);
+  };
+  
+  const [isCustomCategory, setIsCustomCategory] = useState(isCategoryCustom());
+  const [category, setCategory] = useState(
+    isCategoryCustom() ? '' : (transactionToEdit?.category || (transactionToEdit?.type === 'income' ? INCOME_CATEGORIES[0].name : EXPENSE_CATEGORIES[0].name))
+  );
+  const [customCategory, setCustomCategory] = useState(isCategoryCustom() ? transactionToEdit?.category || '' : '');
+
+  // Payment method initialization logic
+  const getInitialPaymentMethod = () => {
+    if (!transactionToEdit) return 'Cash';
+    if (transactionToEdit.cardId) return 'credit';
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account'];
+    if (presets.includes(transactionToEdit.paymentMethod || '')) return transactionToEdit.paymentMethod || 'Cash';
+    return 'CUSTOM_PAYMENT';
+  };
+
+  const isPaymentCustom = () => {
+    if (!transactionToEdit) return false;
+    if (transactionToEdit.cardId) return false;
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account'];
+    return !presets.includes(transactionToEdit.paymentMethod || '');
+  };
+
+  const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod());
+  const [isCustomPayment, setIsCustomPayment] = useState(isPaymentCustom());
+  const [customPayment, setCustomPayment] = useState(isPaymentCustom() ? transactionToEdit?.paymentMethod || '' : '');
+
+  const [description, setDescription] = useState(transactionToEdit?.description || '');
+  const [date, setDate] = useState(transactionToEdit?.date || new Date().toISOString().split('T')[0]);
+  const [cardId, setCardId] = useState(transactionToEdit?.cardId || '');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -153,15 +188,29 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
     setSubmitting(true);
 
     try {
-      await addTransaction({
-        amount: parsedAmount,
-        type,
-        category: finalCategory,
-        description: description.trim(),
-        date,
-        cardId: type === 'expense' && paymentMethod === 'credit' ? cardId : null,
-        paymentMethod: finalPaymentMethod,
-      });
+      if (isEditing && transactionToEdit) {
+        const newTx: Transaction = {
+          ...transactionToEdit,
+          amount: parsedAmount,
+          type,
+          category: finalCategory,
+          description: description.trim(),
+          date,
+          cardId: type === 'expense' && paymentMethod === 'credit' ? cardId : null,
+          paymentMethod: finalPaymentMethod,
+        };
+        await updateTransaction({ oldTx: transactionToEdit, newTx });
+      } else {
+        await addTransaction({
+          amount: parsedAmount,
+          type,
+          category: finalCategory,
+          description: description.trim(),
+          date,
+          cardId: type === 'expense' && paymentMethod === 'credit' ? cardId : null,
+          paymentMethod: finalPaymentMethod,
+        });
+      }
       onSuccess();
     } catch (err: any) {
       setError(err?.message || 'Failed to record transaction.');
@@ -456,7 +505,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess }) =
           disabled={submitting}
           className="rounded-xl py-3.5 shadow-lg shadow-black/10 relative overflow-hidden"
         >
-          {submitting ? 'Recording...' : 'Record Transaction'}
+          {submitting ? 'Recording...' : isEditing ? 'Reforge Log' : 'Record Transaction'}
         </Button>
       </div>
     </form>

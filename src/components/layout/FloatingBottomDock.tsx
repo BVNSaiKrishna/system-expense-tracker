@@ -18,7 +18,7 @@ export const FloatingBottomDock: React.FC<FloatingBottomDockProps> = ({ items, t
   const location = useLocation();
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+    <div className="absolute bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
       <div className="flex items-center justify-around w-full max-w-md h-16 px-4 bg-slate-950/75 border border-white/5 rounded-full backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] pointer-events-auto relative overflow-hidden">
         {items.map((item) => {
           const isActive = location.pathname === item.path;

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { ShieldAlert, LogIn, Sparkles, UserPlus, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import logoUrl from '../assets/logo.png';
 
 export const Auth: React.FC = () => {
   const { loginWithEmail, registerWithEmail, loginWithGoogle, loginAsGuest } = useAuth();
@@ -89,8 +90,14 @@ export const Auth: React.FC = () => {
         >
           {/* Header Title */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-display font-black text-white uppercase tracking-[0.15em] flex items-center justify-center gap-2">
-              <span className="w-2.5 h-5 bg-neon-blue inline-block clip-hud-corners animate-pulse" />
+            <div className="flex justify-center mb-3">
+              <img
+                src={logoUrl}
+                alt="System Logo"
+                className="w-16 h-16 object-contain drop-shadow-[0_0_12px_rgba(0,200,255,0.65)]"
+              />
+            </div>
+            <h1 className="text-2xl font-display font-black text-white uppercase tracking-[0.12em] flex items-center justify-center gap-2">
               SYSTEM GATEWAY
             </h1>
             <p className="text-[10px] font-mono text-neon-blue uppercase tracking-widest mt-1.5">

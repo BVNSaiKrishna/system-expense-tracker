@@ -396,22 +396,22 @@ export const Cards: React.FC = () => {
       ) : (
         /* ACTIVE CARD DETAIL VIEW */
         activeCard && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="space-y-6">
             
-            {/* Left Col: Glass Card display & Navigation Tabs */}
-            <div className="lg:col-span-4 space-y-6">
+            {/* Top Section: Glass Card display & Navigation Tabs */}
+            <div className="space-y-4">
               <PremiumGlassCard card={activeCard} isInteractive={true} />
 
-              {/* Sub-tabs menu */}
-              <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-2 space-y-1">
+              {/* Horizontal Scroll Sub-tabs menu */}
+              <div className="flex overflow-x-auto gap-2 p-1.5 bg-slate-900/50 border border-white/5 rounded-2xl scrollbar-none snap-x">
                 {([
                   { id: 'overview', label: 'Overview', icon: Shield },
-                  { id: 'transactions', label: 'Transactions', icon: SearchCode },
-                  { id: 'statements', label: 'Statements', icon: Calendar },
-                  { id: 'payments', label: 'Payments', icon: CheckCircle2 },
-                  { id: 'rewards', label: 'Rewards & Health', icon: Award },
+                  { id: 'transactions', label: 'Tx Log', icon: SearchCode },
+                  { id: 'statements', label: 'Bills', icon: Calendar },
+                  { id: 'payments', label: 'History', icon: CheckCircle2 },
+                  { id: 'rewards', label: 'Rewards', icon: Award },
                   { id: 'analytics', label: 'Analytics', icon: Activity },
-                  { id: 'settings', label: 'Card Settings', icon: SettingsIcon }
+                  { id: 'settings', label: 'Settings', icon: SettingsIcon }
                 ] as const).map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -419,13 +419,13 @@ export const Cards: React.FC = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-sans font-medium transition-all text-left cursor-pointer ${
+                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer snap-center ${
                         isActive
-                          ? 'bg-[#00C8FF]/10 text-[#00C8FF] border-l-2 border-[#00C8FF]'
-                          : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          ? 'bg-[#00C8FF]/10 text-[#00C8FF] border border-[#00C8FF]/20 shadow-[0_0_10px_rgba(0,200,255,0.1)]'
+                          : 'text-slate-400 hover:text-white bg-slate-950/20'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-3.5 h-3.5" />
                       {tab.label}
                     </button>
                   );
@@ -433,8 +433,8 @@ export const Cards: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Col: Tab Content Panels */}
-            <div className="lg:col-span-8 bg-slate-900/30 border border-white/5 rounded-2xl p-6 min-h-[460px]">
+            {/* Bottom Section: Tab Content Panels */}
+            <div className="bg-slate-900/30 border border-white/5 rounded-2xl p-4 min-h-[400px]">
               
               {/* Tab Panel: OVERVIEW */}
               {activeTab === 'overview' && (

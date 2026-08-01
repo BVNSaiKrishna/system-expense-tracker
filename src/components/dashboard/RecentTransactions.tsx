@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTransactions } from '../../hooks/useTransactions';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { ArrowUpRight, ArrowDownRight, Trash2, Calendar, Tag, CreditCard } from 'lucide-react';
+import { Modal } from '../ui/Modal';
+import { TransactionForm } from '../transactions/TransactionForm';
+import { Transaction } from '../../types';
+import { ArrowUpRight, ArrowDownRight, Trash2, Edit2, Calendar, Tag, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const RecentTransactions: React.FC = () => {
   const { transactions, deleteTransaction, isLoading } = useTransactions();
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   const recentTxs = transactions.slice(0, 5);
 
@@ -110,13 +114,24 @@ export const RecentTransactions: React.FC = () => {
                       {formatAmount(tx.amount, tx.type)}
                     </span>
                     
-                    {/* Delete Action button */}
-                    <button
-                      onClick={() => deleteTransaction(tx)}
-                      className="p-1 rounded border border-slate-900 hover:border-neon-red bg-slate-950/20 hover:bg-neon-red/10 text-slate-600 hover:text-neon-red cursor-pointer transition-all duration-200 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Edit button */}
+                      <button
+                        onClick={() => setEditingTx(tx)}
+                        className="p-1 rounded border border-slate-900 hover:border-neon-blue bg-slate-950/20 hover:bg-neon-blue/10 text-slate-600 hover:text-neon-blue cursor-pointer transition-all duration-200"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      {/* Delete Action button */}
+                      <button
+                        onClick={() => deleteTransaction(tx)}
+                        className="p-1 rounded border border-slate-900 hover:border-neon-red bg-slate-950/20 hover:bg-neon-red/10 text-slate-600 hover:text-neon-red cursor-pointer transition-all duration-200"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                 </motion.div>
@@ -125,6 +140,13 @@ export const RecentTransactions: React.FC = () => {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editingTx} onClose={() => setEditingTx(null)} title="Reforge Operation Log">
+        {editingTx && (
+          <TransactionForm transactionToEdit={editingTx} onSuccess={() => setEditingTx(null)} />
+        )}
+      </Modal>
     </Card>
   );
 };

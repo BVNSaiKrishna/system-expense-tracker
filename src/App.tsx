@@ -10,12 +10,8 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Transactions = React.lazy(() => import('./pages/Transactions'));
 const Cards = React.lazy(() => import('./pages/Cards'));
-const Goals = React.lazy(() => import('./pages/Goals'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
-const Achievements = React.lazy(() => import('./pages/Achievements'));
 const Settings = React.lazy(() => import('./pages/Settings'));
-const Profile = React.lazy(() => import('./pages/Profile'));
-const Army = React.lazy(() => import('./pages/Army'));
 const Auth = React.lazy(() => import('./pages/Auth'));
 
 const queryClient = new QueryClient({
@@ -70,12 +66,8 @@ const AppContent: React.FC = () => {
             <Route index element={<Dashboard />} />
             <Route path="transactions" element={<Transactions />} />
             <Route path="cards" element={<Cards />} />
-            <Route path="goals" element={<Goals />} />
-            <Route path="army" element={<Army />} />
             <Route path="analytics" element={<Analytics />} />
-            <Route path="achievements" element={<Achievements />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="profile" element={<Profile />} />
           </Route>
 
           {/* Catch-all Fallback */}
