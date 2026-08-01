@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useGoals } from '../../hooks/useGoals';
@@ -91,6 +91,17 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const { transactions } = useTransactions();
   const { goals } = useGoals();
 
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const scrollLeft = containerRef.current.scrollLeft;
+    const cardWidth = containerRef.current.scrollWidth / 3;
+    const index = Math.round(scrollLeft / cardWidth);
+    setActiveCardIndex(Math.min(Math.max(index, 0), 2));
+  };
+
   if (!user) return null;
 
   // Filter transactions for this month
@@ -165,47 +176,68 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-      {stats.map((stat, i) => {
-        const Icon = stat.icon;
-        return (
-          <Card
-            key={i}
-            glowColor="none"
-            clipCorners={false}
-            className="flex flex-col relative overflow-hidden bg-white/5 border border-white/5 rounded-2xl hover:border-white/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 group"
-          >
-            {/* Ambient Background Hover Glow */}
-            <div 
-              className="absolute -right-6 -top-6 w-20 h-20 rounded-full filter blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-              style={{ backgroundColor: stat.color }}
-            />
+    <div className="w-full">
+      {/* Scrollable container */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex gap-4 w-full overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 -mx-4 px-4"
+      >
+        {stats.map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <Card
+              key={i}
+              glowColor={stat.glowColor}
+              clipCorners={true}
+              className="flex-shrink-0 w-[85%] snap-center flex flex-col relative overflow-hidden bg-slate-900/40 border border-white/5 rounded-2xl hover:border-white/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 group"
+            >
+              {/* Ambient Background Hover Glow */}
+              <div 
+                className="absolute -right-6 -top-6 w-20 h-20 rounded-full filter blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+                style={{ backgroundColor: stat.color }}
+              />
 
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">
-                {stat.label}
-              </span>
-              <Icon className="w-4 h-4" style={{ color: stat.color }} />
-            </div>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">
+                  {stat.label}
+                </span>
+                <Icon className="w-4 h-4" style={{ color: stat.color }} />
+              </div>
 
-            <div className="flex justify-between items-end mt-2">
-              <div>
-                <span className="text-2xl font-black tracking-tight text-white font-sans">
-                  {stat.prefix}<AnimatedNumber value={stat.value} />
-                  <span className="text-sm font-bold text-slate-500 ml-1">G</span>
-                </span>
-                <span className="text-[9px] font-sans text-slate-500 mt-1 block uppercase tracking-wider">
-                  {stat.subtext}
-                </span>
+              <div className="flex justify-between items-end mt-2">
+                <div>
+                  <span className="text-2xl font-black tracking-tight text-white font-sans">
+                    {stat.prefix}<AnimatedNumber value={stat.value} />
+                    <span className="text-sm font-bold text-slate-500 ml-1">G</span>
+                  </span>
+                  <span className="text-[9px] font-sans text-slate-500 mt-1 block uppercase tracking-wider">
+                    {stat.subtext}
+                  </span>
+                </div>
+                
+                <div className="pb-1.5">
+                  <Sparkline values={stat.sparkData} color={stat.color} />
+                </div>
               </div>
-              
-              <div className="pb-1.5">
-                <Sparkline values={stat.sparkData} color={stat.color} />
-              </div>
-            </div>
-          </Card>
-        );
-      })}
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Pagination Dots */}
+      <div className="flex justify-center gap-1.5 mt-3">
+        {stats.map((_, idx) => (
+          <div
+            key={idx}
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              activeCardIndex === idx 
+                ? 'bg-neon-blue w-3.5 shadow-[0_0_8px_rgba(0,200,255,0.8)]' 
+                : 'bg-white/15'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 };

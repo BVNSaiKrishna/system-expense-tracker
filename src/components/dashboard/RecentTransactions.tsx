@@ -9,11 +9,19 @@ import { Transaction } from '../../types';
 import { ArrowUpRight, ArrowDownRight, Trash2, Edit2, Calendar, Tag, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const RecentTransactions: React.FC = () => {
+interface RecentTransactionsProps {
+  selectedMonth?: string;
+}
+
+export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ selectedMonth }) => {
   const { transactions, deleteTransaction, isLoading } = useTransactions();
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
-  const recentTxs = transactions.slice(0, 5);
+  const filteredTxs = selectedMonth
+    ? transactions.filter((t) => t.date.startsWith(selectedMonth))
+    : transactions;
+
+  const recentTxs = filteredTxs.slice(0, 5);
 
   const formatAmount = (amount: number, type: 'income' | 'expense') => {
     const prefix = type === 'income' ? '+' : '-';
@@ -80,10 +88,10 @@ export const RecentTransactions: React.FC = () => {
 
                     {/* Transaction Metadata */}
                     <div>
-                      <h4 className="text-xs font-display font-bold text-white leading-none uppercase tracking-wide">
+                      <h4 className="text-xs font-display font-bold text-white leading-none uppercase tracking-wide truncate max-w-[130px] sm:max-w-none">
                         {tx.description}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1.5 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
                         <span className="flex items-center gap-0.5">
                           <Tag className="w-2.5 h-2.5 text-slate-600" />
                           {tx.category}
@@ -115,7 +123,7 @@ export const RecentTransactions: React.FC = () => {
                     </span>
                     
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       {/* Edit button */}
                       <button
                         onClick={() => setEditingTx(tx)}

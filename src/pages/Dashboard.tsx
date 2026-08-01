@@ -3,16 +3,19 @@ import { useAuth } from '../context/AuthContext';
 import { StatsHUD } from '../components/dashboard/StatsHUD';
 import { RecentTransactions } from '../components/dashboard/RecentTransactions';
 import { CreditOverviewWidget } from '../components/dashboard/CreditOverviewWidget';
+import { MonthFilterWidget } from '../components/dashboard/MonthFilterWidget';
 import { useCreditCards } from '../hooks/useCreditCards';
-import { AlertTriangle, AlertCircle, Calendar, Info } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Calendar, Info, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { creditCards, statements } = useCreditCards();
   
-  // Date selection state (pinned to current month)
+  // Date selection state
   const now = new Date();
-  const selectedMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const [remindersExpanded, setRemindersExpanded] = useState(false);
 
   // Generate smart dashboard reminders
   const reminders = useMemo(() => {
@@ -76,35 +79,98 @@ export const Dashboard: React.FC = () => {
       {/* Smart Credit Card Reminders Banners */}
       {reminders.length > 0 && (
         <div className="space-y-2.5">
-          {reminders.map((alert) => {
-            const Icon = alert.icon;
-            const borderColors = {
-              danger: 'border-red-500/25 bg-red-500/5 text-red-200',
-              warning: 'border-amber-500/25 bg-amber-500/5 text-amber-200',
-              info: 'border-[#00C8FF]/25 bg-[#00C8FF]/5 text-[#00C8FF]/20',
-            }[alert.type];
-
-            const iconColors = {
-              danger: 'text-red-400',
-              warning: 'text-amber-400',
-              info: 'text-[#00C8FF]',
-            }[alert.type];
-
-            return (
-              <div
-                key={alert.id}
-                className={`p-3.5 border rounded-xl flex items-start gap-3 text-xs text-left backdrop-blur-md transition-all ${borderColors}`}
+          {reminders.length > 1 ? (
+            <div className="border border-red-500/25 bg-red-500/5 rounded-xl overflow-hidden backdrop-blur-md transition-all duration-300">
+              <button
+                type="button"
+                onClick={() => setRemindersExpanded(!remindersExpanded)}
+                className="w-full p-3.5 flex items-center justify-between text-xs text-left cursor-pointer focus:outline-none"
               >
-                <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${iconColors}`} />
-                <div>
-                  <h5 className="font-bold text-white uppercase tracking-wide">{alert.title}</h5>
-                  <p className="mt-0.5 text-slate-400 leading-relaxed">{alert.message}</p>
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-4 h-4 text-red-400 animate-pulse" />
+                  <div>
+                    <h5 className="font-bold text-white uppercase tracking-wide">
+                      System Alerts Detected ({reminders.length})
+                    </h5>
+                    <p className="mt-0.5 text-slate-400 text-[10px]">
+                      Tap to toggle warning details.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+                <motion.div
+                  animate={{ rotate: remindersExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-slate-400"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {remindersExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-white/5 bg-slate-950/40 divide-y divide-white/5 overflow-hidden"
+                  >
+                    {reminders.map((alert) => {
+                      const Icon = alert.icon;
+                      const iconColors = {
+                        danger: 'text-red-400',
+                        warning: 'text-amber-400',
+                        info: 'text-[#00C8FF]',
+                      }[alert.type];
+
+                      return (
+                        <div key={alert.id} className="p-3 flex items-start gap-2.5 text-[11px] text-left">
+                          <Icon className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${iconColors}`} />
+                          <div>
+                            <h6 className="font-bold text-white uppercase tracking-wide text-[10px]">{alert.title}</h6>
+                            <p className="mt-0.5 text-slate-400 leading-normal">{alert.message}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            reminders.map((alert) => {
+              const Icon = alert.icon;
+              const borderColors = {
+                danger: 'border-red-500/25 bg-red-500/5 text-red-200',
+                warning: 'border-amber-500/25 bg-amber-500/5 text-amber-200',
+                info: 'border-[#00C8FF]/25 bg-[#00C8FF]/5 text-[#00C8FF]/20',
+              }[alert.type];
+
+              const iconColors = {
+                danger: 'text-red-400',
+                warning: 'text-amber-400',
+                info: 'text-[#00C8FF]',
+              }[alert.type];
+
+              return (
+                <div
+                  key={alert.id}
+                  className={`p-3.5 border rounded-xl flex items-start gap-3 text-xs text-left backdrop-blur-md transition-all ${borderColors}`}
+                >
+                  <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${iconColors}`} />
+                  <div>
+                    <h5 className="font-bold text-white uppercase tracking-wide">{alert.title}</h5>
+                    <p className="mt-0.5 text-slate-400 leading-relaxed">{alert.message}</p>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
+
+      {/* Monthly Active Horizon Filter */}
+      <MonthFilterWidget selectedMonth={selectedMonth} onChange={setSelectedMonth} />
 
       {/* 1. Core Balances Statistics */}
       <StatsHUD selectedMonth={selectedMonth} />
@@ -120,7 +186,7 @@ export const Dashboard: React.FC = () => {
             </span>
           </div>
 
-          <RecentTransactions />
+          <RecentTransactions selectedMonth={selectedMonth} />
         </div>
 
         {/* Credit Overview Widget */}
