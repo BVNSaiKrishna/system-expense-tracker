@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { StatsHUD } from '../components/dashboard/StatsHUD';
 import { RecentTransactions } from '../components/dashboard/RecentTransactions';
-import { CreditOverviewWidget } from '../components/dashboard/CreditOverviewWidget';
 import { MonthFilterWidget } from '../components/dashboard/MonthFilterWidget';
+import { LevelHUD } from '../components/dashboard/LevelHUD';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { AlertTriangle, AlertCircle, Calendar, Info, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,26 +48,7 @@ export const Dashboard: React.FC = () => {
       }
     });
 
-    statements.forEach((s) => {
-      if (s.remainingAmount <= 0) return;
-      const card = creditCards.find((c) => c.id === s.cardId);
-      if (!card) return;
 
-      const dueDate = new Date(s.dueDate);
-      const diffTime = dueDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      // 3. Payment due tomorrow or overdue
-      if (diffDays <= 1) {
-        alerts.push({
-          id: `due-${s.id}`,
-          title: diffDays < 0 ? 'Payment Overdue' : 'Payment Due Tomorrow',
-          message: `${card.bank || 'Bank'} statement balance of ${s.remainingAmount.toLocaleString()} G is ${diffDays < 0 ? 'overdue' : 'due tomorrow'}.`,
-          type: 'danger',
-          icon: AlertCircle,
-        });
-      }
-    });
 
     return alerts;
   }, [creditCards, statements]);
@@ -169,6 +150,9 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* 0. RPG Character Level HUD Card */}
+      <LevelHUD />
+
       {/* Monthly Active Horizon Filter */}
       <MonthFilterWidget selectedMonth={selectedMonth} onChange={setSelectedMonth} />
 
@@ -189,10 +173,6 @@ export const Dashboard: React.FC = () => {
           <RecentTransactions selectedMonth={selectedMonth} />
         </div>
 
-        {/* Credit Overview Widget */}
-        <div>
-          <CreditOverviewWidget />
-        </div>
 
       </div>
     </div>

@@ -66,13 +66,9 @@ export const MonthFilterWidget: React.FC<MonthFilterWidgetProps> = ({ selectedMo
           <span className="text-xl font-display font-black text-neon-blue text-glow-blue tracking-wider block mt-0.5 leading-none">
             {displayMonth} {year}
           </span>
-          {/* Net Yield Pill */}
-          <span className={`inline-block mt-1.5 px-2 py-0.5 border rounded-full text-[8px] font-mono font-bold uppercase tracking-wider ${
-            net >= 0 
-              ? 'bg-neon-green/10 border-neon-green/20 text-neon-green text-glow-green' 
-              : 'bg-neon-red/10 border-neon-red/20 text-neon-red text-glow-red'
-          }`}>
-            Net: {net >= 0 ? '+' : ''}{net.toLocaleString()}g
+          {/* Expenses Pill */}
+          <span className="inline-block mt-1.5 px-2 py-0.5 border border-neon-red/20 bg-neon-red/10 text-neon-red text-glow-red rounded-full text-[8px] font-mono font-bold uppercase tracking-wider">
+            Upkeep: -{expense.toLocaleString()}g
           </span>
         </div>
 

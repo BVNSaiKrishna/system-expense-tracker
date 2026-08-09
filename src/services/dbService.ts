@@ -344,24 +344,24 @@ export const dbService = {
       try {
         const colRef = collection(db, 'users', userId, 'creditCards');
         const docRef = await addDoc(colRef, {
-          name: newCard.name,
-          bank: newCard.bank,
-          last4Digits: newCard.last4Digits,
-          limit: newCard.limit,
-          balance: newCard.balance,
-          dueDate: newCard.dueDate,
-          statementDate: newCard.statementDate,
-          statementCycle: newCard.statementCycle,
-          interestRate: newCard.interestRate || null,
-          annualFee: newCard.annualFee,
-          rewardProgramName: newCard.rewardProgramName,
-          color: newCard.color,
-          rarity: newCard.rarity,
-          network: newCard.network,
-          rewardPoints: newCard.rewardPoints,
-          cashbackEarned: newCard.cashbackEarned,
-          milesEarned: newCard.milesEarned,
-          vouchersEarned: newCard.vouchersEarned,
+          name: newCard.name || '',
+          bank: newCard.bank || '',
+          last4Digits: newCard.last4Digits || '',
+          limit: newCard.limit || 0,
+          balance: newCard.balance || 0,
+          dueDate: newCard.dueDate || 25,
+          statementDate: newCard.statementDate || 5,
+          statementCycle: newCard.statementCycle || 'Monthly',
+          interestRate: newCard.interestRate !== undefined ? newCard.interestRate : null,
+          annualFee: newCard.annualFee || 0,
+          rewardProgramName: newCard.rewardProgramName || 'Points Program',
+          color: newCard.color || 'blue',
+          rarity: newCard.rarity || 'common',
+          network: newCard.network || 'Visa',
+          rewardPoints: newCard.rewardPoints || 0,
+          cashbackEarned: newCard.cashbackEarned || 0,
+          milesEarned: newCard.milesEarned || 0,
+          vouchersEarned: newCard.vouchersEarned || 0,
           createdAt: newCard.createdAt,
           userId: newCard.userId,
         });
@@ -373,6 +373,7 @@ export const dbService = {
         }
       } catch (error) {
         console.error('Firestore addCreditCard error:', error);
+        throw error;
       }
     }
 
@@ -388,34 +389,37 @@ export const dbService = {
     const index = cards.findIndex((c) => c.id === card.id);
     if (index > -1) {
       cards[index] = card;
-      setLocalData(`rpg_cards_${userId}`, cards);
+    } else {
+      cards.push(card);
     }
+    setLocalData(`rpg_cards_${userId}`, cards);
 
     if (isFirebaseConfigured && !isGuest && db) {
       try {
         const docRef = doc(db, 'users', userId, 'creditCards', card.id);
         await setDoc(docRef, {
-          name: card.name,
-          bank: card.bank,
-          last4Digits: card.last4Digits,
-          limit: card.limit,
-          balance: card.balance,
-          dueDate: card.dueDate,
-          statementDate: card.statementDate,
-          statementCycle: card.statementCycle,
-          interestRate: card.interestRate || null,
-          annualFee: card.annualFee,
-          rewardProgramName: card.rewardProgramName,
-          color: card.color,
-          rarity: card.rarity,
-          network: card.network,
-          rewardPoints: card.rewardPoints,
-          cashbackEarned: card.cashbackEarned,
-          milesEarned: card.milesEarned,
-          vouchersEarned: card.vouchersEarned,
+          name: card.name || '',
+          bank: card.bank || '',
+          last4Digits: card.last4Digits || '',
+          limit: card.limit || 0,
+          balance: card.balance || 0,
+          dueDate: card.dueDate || 25,
+          statementDate: card.statementDate || 5,
+          statementCycle: card.statementCycle || 'Monthly',
+          interestRate: card.interestRate !== undefined ? card.interestRate : null,
+          annualFee: card.annualFee || 0,
+          rewardProgramName: card.rewardProgramName || 'Points Program',
+          color: card.color || 'blue',
+          rarity: card.rarity || 'common',
+          network: card.network || 'Visa',
+          rewardPoints: card.rewardPoints || 0,
+          cashbackEarned: card.cashbackEarned || 0,
+          milesEarned: card.milesEarned || 0,
+          vouchersEarned: card.vouchersEarned || 0,
         }, { merge: true });
       } catch (error) {
         console.error('Firestore updateCreditCard error:', error);
+        throw error;
       }
     }
   },

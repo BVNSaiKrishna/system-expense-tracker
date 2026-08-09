@@ -19,7 +19,8 @@ import {
   UploadCloud,
   FileCheck,
   Wallet,
-  Building
+  Building,
+  Tag
 } from 'lucide-react';
 
 import { Transaction } from '../../types';
@@ -72,15 +73,34 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
 
   const isEditing = !!transactionToEdit;
 
-  const [type, setType] = useState<'income' | 'expense'>(transactionToEdit?.type || 'expense');
+  const [type] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState(transactionToEdit?.amount ? transactionToEdit.amount.toString() : '');
+
+  // Load custom categories and payment methods from localStorage
+  const [savedCategories, setSavedCategories] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('expenseTracker_customCategories');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [savedPayments, setSavedPayments] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('expenseTracker_customPayments');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   
   // Categorization logic
   const isCategoryCustom = () => {
     if (!transactionToEdit) return false;
     const presets = transactionToEdit.type === 'expense' 
-      ? EXPENSE_CATEGORIES.map(c => c.name) 
-      : INCOME_CATEGORIES.map(c => c.name);
+      ? [...EXPENSE_CATEGORIES.map(c => c.name), ...savedCategories] 
+      : [...INCOME_CATEGORIES.map(c => c.name), ...savedCategories];
     return !presets.includes(transactionToEdit.category);
   };
   
@@ -89,43 +109,34 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
     isCategoryCustom() ? '' : (transactionToEdit?.category || (transactionToEdit?.type === 'income' ? INCOME_CATEGORIES[0].name : EXPENSE_CATEGORIES[0].name))
   );
   const [customCategory, setCustomCategory] = useState(isCategoryCustom() ? transactionToEdit?.category || '' : '');
-
+ 
   // Payment method initialization logic
   const getInitialPaymentMethod = () => {
     if (!transactionToEdit) return 'Cash';
     if (transactionToEdit.cardId) return 'credit';
-    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account'];
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...savedPayments];
     if (presets.includes(transactionToEdit.paymentMethod || '')) return transactionToEdit.paymentMethod || 'Cash';
     return 'CUSTOM_PAYMENT';
   };
-
+ 
   const isPaymentCustom = () => {
     if (!transactionToEdit) return false;
     if (transactionToEdit.cardId) return false;
-    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account'];
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...savedPayments];
     return !presets.includes(transactionToEdit.paymentMethod || '');
   };
-
+ 
   const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod());
   const [isCustomPayment, setIsCustomPayment] = useState(isPaymentCustom());
   const [customPayment, setCustomPayment] = useState(isPaymentCustom() ? transactionToEdit?.paymentMethod || '' : '');
-
+ 
   const [description, setDescription] = useState(transactionToEdit?.description || '');
   const [date, setDate] = useState(transactionToEdit?.date || new Date().toISOString().split('T')[0]);
   const [cardId, setCardId] = useState(transactionToEdit?.cardId || '');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  const handleTypeChange = (newType: 'income' | 'expense') => {
-    setType(newType);
-    setIsCustomCategory(false);
-    setCategory(newType === 'expense' ? EXPENSE_CATEGORIES[0].name : INCOME_CATEGORIES[0].name);
-    setPaymentMethod('Cash');
-    setIsCustomPayment(false);
-    setCardId('');
-  };
-
+ 
   const handleCategoryChange = (val: string) => {
     if (val === 'CUSTOM_CATEGORY') {
       setIsCustomCategory(true);
@@ -211,6 +222,25 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
           paymentMethod: finalPaymentMethod,
         });
       }
+
+      // Save custom category if typed
+      if (isCustomCategory && finalCategory) {
+        const cleaned = finalCategory.replace(/\s*\(.*\)/, '').trim();
+        if (cleaned && !savedCategories.includes(cleaned)) {
+          const updated = [...savedCategories, cleaned];
+          localStorage.setItem('expenseTracker_customCategories', JSON.stringify(updated));
+        }
+      }
+
+      // Save custom payment method if typed
+      if (isCustomPayment && finalPaymentMethod) {
+        const cleaned = finalPaymentMethod.trim();
+        if (cleaned && !savedPayments.includes(cleaned)) {
+          const updated = [...savedPayments, cleaned];
+          localStorage.setItem('expenseTracker_customPayments', JSON.stringify(updated));
+        }
+      }
+
       onSuccess();
     } catch (err: any) {
       setError(err?.message || 'Failed to record transaction.');
@@ -228,33 +258,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
         </div>
       )}
 
-      {/* 1. Centered segmented Transaction Type control */}
-      <div className="flex justify-center">
-        <div className="inline-flex bg-white/5 border border-white/5 p-1 rounded-full w-full max-w-xs">
-          <button
-            type="button"
-            onClick={() => handleTypeChange('expense')}
-            className={`flex-1 py-1.5 text-[10px] font-sans font-bold uppercase rounded-full tracking-wider transition-all cursor-pointer ${
-              type === 'expense'
-                ? 'bg-red-500/15 text-red-400 border border-red-500/20'
-                : 'text-slate-400 border-transparent hover:text-slate-200'
-            }`}
-          >
-            Expenses Load
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTypeChange('income')}
-            className={`flex-1 py-1.5 text-[10px] font-sans font-bold uppercase rounded-full tracking-wider transition-all cursor-pointer ${
-              type === 'income'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                : 'text-slate-400 border-transparent hover:text-slate-200'
-            }`}
-          >
-            Income Yield
-          </button>
-        </div>
-      </div>
 
       {/* 2. Giant Centered Amount Input */}
       <div className="flex flex-col items-center justify-center py-2">
@@ -268,7 +271,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
             className="text-center font-sans font-black text-4xl md:text-5xl bg-transparent border-0 text-white focus:outline-none focus:ring-0 w-full max-w-xs placeholder-slate-800"
-            autoFocus
           />
           <span className="text-sm font-bold text-slate-500 absolute right-12 bottom-1.5 md:right-28">G</span>
         </div>
@@ -304,6 +306,29 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
               </button>
             );
           })}
+
+          {savedCategories.map((catName) => {
+            const isSelected = !isCustomCategory && category === catName;
+            return (
+              <button
+                type="button"
+                key={catName}
+                onClick={() => {
+                  setIsCustomCategory(false);
+                  setCategory(catName);
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-left cursor-pointer transition-all duration-200 text-xs ${
+                  isSelected
+                    ? 'border-[#00C8FF] bg-[#00C8FF]/10 text-[#00C8FF]'
+                    : 'border-white/5 bg-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
+                <span className="font-medium tracking-wide">{catName}</span>
+              </button>
+            );
+          })}
+
           {/* Custom Category Chip */}
           <button
             type="button"
@@ -381,6 +406,29 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
               <span className="font-medium tracking-wide">Credit Card</span>
             </button>
           )}
+
+          {savedPayments.map((pm) => {
+            const isSelected = !isCustomPayment && paymentMethod === pm;
+            return (
+              <button
+                type="button"
+                key={pm}
+                onClick={() => {
+                  setIsCustomPayment(false);
+                  setPaymentMethod(pm);
+                  setCardId('');
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-left cursor-pointer transition-all duration-200 text-xs ${
+                  isSelected
+                    ? 'border-[#00C8FF] bg-[#00C8FF]/10 text-[#00C8FF]'
+                    : 'border-white/5 bg-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
+                <span className="font-medium tracking-wide">{pm}</span>
+              </button>
+            );
+          })}
 
           <button
             type="button"

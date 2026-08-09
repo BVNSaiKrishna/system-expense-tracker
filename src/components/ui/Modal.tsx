@@ -56,13 +56,13 @@ export const Modal: React.FC<ModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 overflow-y-auto">
-          {/* Backdrop Blur Overlay */}
+          {/* Backdrop Overlay (Blur disabled on mobile to prevent virtual keyboard repaint lag) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md"
+            className="fixed inset-0 bg-black/85 md:bg-black/70 md:backdrop-blur-md"
           />
 
           {/* Modal / Bottom Sheet Container */}
@@ -81,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
             }}
             className={`w-full z-10 ${
               isMobile 
-                ? 'self-end bg-slate-950 border-t border-white/10 rounded-t-[32px] pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]' 
+                ? 'self-end bg-slate-950 border-t border-white/10 rounded-t-[32px] pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto' 
                 : 'max-w-lg'
             }`}
           >

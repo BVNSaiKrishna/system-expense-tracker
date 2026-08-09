@@ -13,6 +13,7 @@ const Cards = React.lazy(() => import('./pages/Cards'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Auth = React.lazy(() => import('./pages/Auth'));
+const QuickLog = React.lazy(() => import('./pages/QuickLog'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +69,7 @@ const AppContent: React.FC = () => {
             <Route path="cards" element={<Cards />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="quick-log" element={<QuickLog />} />
           </Route>
 
           {/* Catch-all Fallback */}

@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTransactions } from '../../hooks/useTransactions';
-import { useGoals } from '../../hooks/useGoals';
+import { useCreditCards } from '../../hooks/useCreditCards';
 import { Card } from '../ui/Card';
-import { ArrowUpRight, ArrowDownRight, Archive } from 'lucide-react';
+import { ArrowDownRight, CreditCard, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface StatsHUDProps {
   selectedMonth: string;
@@ -89,33 +90,34 @@ const Sparkline: React.FC<{ values: number[]; color: string }> = ({ values, colo
 export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const { user } = useAuth();
   const { transactions } = useTransactions();
-  const { goals } = useGoals();
+  const { creditCards } = useCreditCards();
 
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = () => {
-    if (!containerRef.current) return;
-    const scrollLeft = containerRef.current.scrollLeft;
-    const cardWidth = containerRef.current.scrollWidth / 3;
-    const index = Math.round(scrollLeft / cardWidth);
-    setActiveCardIndex(Math.min(Math.max(index, 0), 2));
-  };
+  const [activeExpandedCard, setActiveExpandedCard] = useState<'expense' | 'outstanding' | null>(null);
 
   if (!user) return null;
 
   // Filter transactions for this month
   const monthTxs = transactions.filter((t) => t.date.startsWith(selectedMonth));
 
-  const monthlyIncome = monthTxs
-    .filter((t) => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-
   const monthlyExpense = monthTxs
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalSavings = goals.reduce((sum, g) => sum + g.currentAmount, 0);
+  const totalOutstanding = creditCards.reduce((sum, c) => sum + c.balance, 0);
+
+  // Group month expenses by category (cleaned of parentheticals) sorted descending
+  const expenseGrouped = useMemo(() => {
+    const groups: Record<string, number> = {};
+    monthTxs
+      .filter((t) => t.type === 'expense')
+      .forEach((t) => {
+        const cat = (t.category || 'Other').replace(/\s*\(.*\)/, '').trim();
+        groups[cat] = (groups[cat] || 0) + t.amount;
+      });
+    return Object.entries(groups)
+      .sort((a, b) => b[1] - a[1])
+      .reduce((r, [k, v]) => ({ ...r, [k]: v }), {} as Record<string, number>);
+  }, [monthTxs]);
 
   // Format month label (e.g., "2026-07" -> "Jul 2026")
   const [yearStr, monthStr] = selectedMonth.split('-');
@@ -123,40 +125,26 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const displayLabel = `${monthName} ${yearStr}`;
 
   // Get data values for sparklines
-  // 1. Income sparkline data (last 8 income transaction amounts this month)
-  const incomeValues = monthTxs
-    .filter((t) => t.type === 'income')
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map((t) => t.amount)
-    .slice(-8);
-
-  // 2. Expense sparkline data (last 8 expense transaction amounts this month)
+  // 1. Overall expense values
   const expenseValues = monthTxs
     .filter((t) => t.type === 'expense')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((t) => t.amount)
     .slice(-8);
 
-  // 3. Savings progress data
-  const savingsValues = goals
-    .map((g) => g.currentAmount)
+  // 2. Card-specific transaction trend
+  const cardTxs = monthTxs
+    .filter((t) => t.type === 'expense' && t.cardId)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((t) => t.amount)
     .slice(-8);
 
   const stats = [
     {
-      label: 'Income Yield',
-      value: monthlyIncome,
-      prefix: '+',
-      subtext: `Earned in ${displayLabel}`,
-      icon: ArrowUpRight,
-      color: '#22C55E',
-      glowColor: 'green' as const,
-      sparkData: incomeValues,
-    },
-    {
+      key: 'expense' as const,
       label: 'Expenses Load',
       value: monthlyExpense,
-      prefix: '-',
+      prefix: '',
       subtext: `Spent in ${displayLabel}`,
       icon: ArrowDownRight,
       color: '#EF4444',
@@ -164,33 +152,38 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
       sparkData: expenseValues,
     },
     {
-      label: 'Savings Vault',
-      value: totalSavings,
+      key: 'outstanding' as const,
+      label: 'Card Outstanding',
+      value: totalOutstanding,
       prefix: '',
-      subtext: 'Accumulated in active goals',
-      icon: Archive,
-      color: '#00C8FF',
-      glowColor: 'blue' as const,
-      sparkData: savingsValues,
+      subtext: 'Total outstanding balances',
+      icon: CreditCard,
+      color: '#FACC15',
+      glowColor: 'gold' as const,
+      sparkData: cardTxs.length > 0 ? cardTxs : expenseValues,
     },
   ];
 
   return (
     <div className="w-full">
-      {/* Scrollable container */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex gap-4 w-full overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2 -mx-4 px-4"
-      >
+      {/* Side-by-side cards grid */}
+      <div className="grid grid-cols-2 gap-4 w-full mb-1">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
+          const isSelected = activeExpandedCard === stat.key;
           return (
             <Card
               key={i}
               glowColor={stat.glowColor}
               clipCorners={true}
-              className="flex-shrink-0 w-[85%] snap-center flex flex-col relative overflow-hidden bg-slate-900/40 border border-white/5 rounded-2xl hover:border-white/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 group"
+              onClick={() => {
+                setActiveExpandedCard(isSelected ? null : stat.key);
+              }}
+              className={`w-full flex flex-col relative overflow-hidden bg-slate-900/40 border transition-all duration-300 group cursor-pointer ${
+                isSelected 
+                  ? 'border-[#00C8FF]/50 shadow-[0_0_15px_rgba(0,200,255,0.15)] bg-slate-900/70' 
+                  : 'border-white/5 hover:border-white/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
+              }`}
             >
               {/* Ambient Background Hover Glow */}
               <div 
@@ -198,46 +191,110 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
                 style={{ backgroundColor: stat.color }}
               />
 
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-2 text-left">
                 <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">
                   {stat.label}
                 </span>
                 <Icon className="w-4 h-4" style={{ color: stat.color }} />
               </div>
 
-              <div className="flex justify-between items-end mt-2">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-end mt-2 text-left gap-3">
                 <div>
-                  <span className="text-2xl font-black tracking-tight text-white font-sans">
+                  <span className="text-xl md:text-2xl font-black tracking-tight text-white font-sans">
                     {stat.prefix}<AnimatedNumber value={stat.value} />
-                    <span className="text-sm font-bold text-slate-500 ml-1">G</span>
+                    <span className="text-xs font-bold text-slate-500 ml-1">G</span>
                   </span>
                   <span className="text-[9px] font-sans text-slate-500 mt-1 block uppercase tracking-wider">
                     {stat.subtext}
                   </span>
                 </div>
                 
-                <div className="pb-1.5">
+                <div className="pb-1.5 flex-shrink-0">
                   <Sparkline values={stat.sparkData} color={stat.color} />
                 </div>
+              </div>
+
+              {/* Bottom Interactive Expand Indicator */}
+              <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between text-[8px] font-mono text-slate-500 uppercase tracking-widest">
+                <span>Details</span>
+                <span className={`transition-transform duration-200 text-[#00C8FF] font-sans font-extrabold ${isSelected ? 'rotate-180' : ''}`}>▼</span>
               </div>
             </Card>
           );
         })}
       </div>
 
-      {/* Pagination Dots */}
-      <div className="flex justify-center gap-1.5 mt-3">
-        {stats.map((_, idx) => (
-          <div
-            key={idx}
-            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-              activeCardIndex === idx 
-                ? 'bg-neon-blue w-3.5 shadow-[0_0_8px_rgba(0,200,255,0.8)]' 
-                : 'bg-white/15'
-            }`}
-          />
-        ))}
-      </div>
+      {/* Dynamic Detail Panel */}
+      <AnimatePresence>
+        {activeExpandedCard && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="w-full overflow-hidden text-left"
+          >
+            <Card 
+              glowColor={activeExpandedCard === 'expense' ? 'red' : 'gold'} 
+              clipCorners={true} 
+              className="p-4 bg-slate-950/60 border border-white/15"
+            >
+              <h4 className="text-[9px] font-mono uppercase tracking-widest text-[#94A3B8] border-b border-white/5 pb-2 mb-3.5 font-bold">
+                {activeExpandedCard === 'expense' && 'Monthly Upkeep Breakdown'}
+                {activeExpandedCard === 'outstanding' && 'Outstanding Card Balances'}
+              </h4>
+
+              {activeExpandedCard === 'expense' && (
+                <div className="space-y-3">
+                  {Object.keys(expenseGrouped).length === 0 ? (
+                    <p className="text-[9px] font-sans text-slate-500 uppercase tracking-wider text-center py-4">No operations registered in selected month</p>
+                  ) : (
+                    Object.entries(expenseGrouped).map(([cat, amount]) => {
+                      const percentage = Math.round((amount / monthlyExpense) * 100) || 0;
+                      return (
+                        <div key={cat} className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-sans">
+                            <span className="text-slate-300 font-bold uppercase tracking-wider">{cat}</span>
+                            <span className="text-white font-mono font-bold">{amount.toLocaleString()} G ({percentage}%)</span>
+                          </div>
+                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${percentage}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {activeExpandedCard === 'outstanding' && (
+                <div className="space-y-3">
+                  {creditCards.length === 0 ? (
+                    <p className="text-[9px] font-sans text-slate-500 uppercase tracking-wider text-center py-4">No credit cards equipped</p>
+                  ) : (
+                    creditCards.map((card) => {
+                      const utilPercent = card.limit > 0 ? Math.round((card.balance / card.limit) * 100) : 0;
+                      return (
+                        <div key={card.id} className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-sans">
+                            <span className="text-slate-300 font-bold uppercase tracking-wider">{card.name}</span>
+                            <span className="text-white font-mono font-bold">{card.balance.toLocaleString()} G ({utilPercent}% limit)</span>
+                          </div>
+                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${Math.min(utilPercent, 100)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* Removed available credit details */}
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

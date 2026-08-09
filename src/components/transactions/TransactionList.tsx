@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTransactions } from '../../hooks/useTransactions';
+import { useCreditCards } from '../../hooks/useCreditCards';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -52,8 +53,13 @@ const getCategoryColor = (category: string) => {
   return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
 };
 
-export const TransactionList: React.FC = () => {
+interface TransactionListProps {
+  selectedMonth?: string;
+}
+
+export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth }) => {
   const { transactions, deleteTransaction, isLoading } = useTransactions();
+  const { creditCards } = useCreditCards();
 
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
@@ -61,30 +67,51 @@ export const TransactionList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [cardFilter, setCardFilter] = useState('all'); // Filter by card ID/Cash
+  const [startDate, setStartDate] = useState(''); // Custom range start date
+  const [endDate, setEndDate] = useState(''); // Custom range end date
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
-  // Derive unique categories
-  const categories = ['all', ...Array.from(new Set(transactions.map((tx) => tx.category)))];
+  // Derive unique categories (cleaned of parentheticals)
+  const categories = useMemo(() => {
+    return ['all', ...Array.from(new Set(transactions.map((tx) => (tx.category || '').replace(/\s*\(.*\)/, '').trim())))];
+  }, [transactions]);
 
   // Filter transactions
   const filteredTxs = useMemo(() => {
     return transactions
       .filter((tx) => {
+        // If a custom range is set, it overrides the month selection filter
+        const matchesMonth = selectedMonth && !startDate && !endDate ? tx.date.startsWith(selectedMonth) : true;
+        const cleanedCat = (tx.category || '').replace(/\s*\(.*\)/, '').trim();
         const matchesSearch =
           tx.description.toLowerCase().includes(search.toLowerCase()) ||
-          tx.category.toLowerCase().includes(search.toLowerCase());
+          cleanedCat.toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === 'all' || tx.type === typeFilter;
-        const matchesCategory = categoryFilter === 'all' || tx.category === categoryFilter;
-        return matchesSearch && matchesType && matchesCategory;
+        const matchesCategory = categoryFilter === 'all' || cleanedCat === categoryFilter;
+
+        // Card filter check
+        let matchesCard = true;
+        if (cardFilter === 'cash') {
+          matchesCard = !tx.cardId;
+        } else if (cardFilter !== 'all') {
+          matchesCard = tx.cardId === cardFilter;
+        }
+
+        // Custom Date Range checks
+        const matchesStartDate = !startDate || tx.date >= startDate;
+        const matchesEndDate = !endDate || tx.date <= endDate;
+
+        return matchesMonth && matchesSearch && matchesType && matchesCategory && matchesCard && matchesStartDate && matchesEndDate;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, search, typeFilter, categoryFilter]);
+  }, [transactions, search, typeFilter, categoryFilter, cardFilter, startDate, endDate, selectedMonth]);
 
-  // Group by category
+  // Group by category (cleaned of parentheticals)
   const groupedByCategory = useMemo(() => {
     const groups: Record<string, typeof transactions> = {};
     filteredTxs.forEach((tx) => {
-      const cat = tx.category || 'Uncategorized';
+      const cat = (tx.category || 'Uncategorized').replace(/\s*\(.*\)/, '').trim();
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(tx);
     });
@@ -175,6 +202,40 @@ export const TransactionList: React.FC = () => {
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
         </div>
 
+        {/* Custom Date Range Filter */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center bg-slate-950/20 p-3 rounded-xl border border-white/5 text-slate-300">
+          <div className="flex items-center gap-2 w-full">
+            <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest min-w-[50px] text-left">From:</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="flex-grow bg-white/5 border border-white/5 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full">
+            <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest min-w-[50px] text-left">To:</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="flex-grow bg-white/5 border border-white/5 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="w-full sm:w-auto px-3.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 rounded-lg text-[9px] font-mono uppercase tracking-wider transition-all cursor-pointer active:scale-95 flex-shrink-0"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
         {/* Scrollable Type Filter Chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-2 px-2">
           {[
@@ -195,6 +256,31 @@ export const TransactionList: React.FC = () => {
                 }`}
               >
                 {type.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Horizontal Card/Payment Filter Chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-2 px-2">
+          {[
+            { id: 'all', name: 'All Payments' },
+            { id: 'cash', name: 'Cash / Cashless' },
+            ...creditCards.map(c => ({ id: c.id, name: c.name }))
+          ].map((item) => {
+            const isActive = cardFilter === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setCardFilter(item.id)}
+                className={`px-3 py-1 rounded-full text-[9px] font-sans font-semibold uppercase tracking-wider border whitespace-nowrap cursor-pointer transition-all duration-200 ${
+                  isActive
+                    ? 'bg-[#FACC15]/15 text-[#FACC15] border-[#FACC15]/30'
+                    : 'bg-white/5 text-slate-500 border-transparent hover:border-white/5 hover:text-slate-300'
+                }`}
+              >
+                {item.name}
               </button>
             );
           })}
