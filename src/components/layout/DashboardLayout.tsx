@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   Swords,
+  PlusCircle,
 } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
@@ -53,6 +54,7 @@ export const DashboardLayout: React.FC = () => {
       switch (key) {
         case 'o': navigate('/'); break;
         case 't': navigate('/transactions'); break;
+        case 'l': navigate('/log'); break;
         case 'c': navigate('/cards'); break;
         case 'a': navigate('/analytics'); break;
         case 's': navigate('/settings'); break;
@@ -72,6 +74,7 @@ export const DashboardLayout: React.FC = () => {
   const menuItems = [
     { label: 'Overview', path: '/', icon: LayoutDashboard },
     { label: 'Transactions', path: '/transactions', icon: Receipt },
+    { label: 'Log', path: '/log', icon: PlusCircle },
     { label: 'Cards', path: '/cards', icon: CardIcon },
     { label: 'Analytics', path: '/analytics', icon: BarChart3 },
     { label: 'Settings', path: '/settings', icon: Settings },

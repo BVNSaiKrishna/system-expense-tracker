@@ -355,7 +355,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
             value={customCategory}
             onChange={(e) => setCustomCategory(e.target.value)}
             placeholder="e.g. Potions, Magic Orbs"
-            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-neon-blue"
+            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-base md:text-xs text-white placeholder-slate-600 focus:outline-none focus:border-neon-blue"
           />
         </div>
       )}
@@ -455,7 +455,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
             value={customPayment}
             onChange={(e) => setCustomPayment(e.target.value)}
             placeholder="e.g. Crypto, Check"
-            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-neon-blue"
+            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-base md:text-xs text-white placeholder-slate-600 focus:outline-none focus:border-neon-blue"
           />
         </div>
       )}
@@ -468,7 +468,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
           <select
             value={cardId}
             onChange={(e) => setCardId(e.target.value)}
-            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
+            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-base md:text-xs text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
             required
           >
             <option value="">-- Choose Credit Card --</option>
@@ -491,7 +491,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Target Grocery Shopping, Office payout"
-          className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00C8FF]"
+          className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-base md:text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00C8FF]"
         />
       </div>
 
@@ -506,7 +506,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
+              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-base md:text-xs text-slate-300 focus:outline-none focus:border-[#00C8FF] cursor-pointer"
             />
             <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           </div>

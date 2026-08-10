@@ -14,6 +14,7 @@ const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Auth = React.lazy(() => import('./pages/Auth'));
 const QuickLog = React.lazy(() => import('./pages/QuickLog'));
+const LogOperation = React.lazy(() => import('./pages/LogOperation'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,6 +71,7 @@ const AppContent: React.FC = () => {
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
             <Route path="quick-log" element={<QuickLog />} />
+            <Route path="log" element={<LogOperation />} />
           </Route>
 
           {/* Catch-all Fallback */}
