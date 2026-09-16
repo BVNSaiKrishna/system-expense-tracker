@@ -5,6 +5,7 @@ import { useCreditCards } from '../../hooks/useCreditCards';
 import { Card } from '../ui/Card';
 import { ArrowDownRight, CreditCard, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isCardBillPaymentCategory } from '../../utils/finance';
 
 interface StatsHUDProps {
   selectedMonth: string;
@@ -92,24 +93,29 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const { transactions } = useTransactions();
   const { creditCards } = useCreditCards();
 
-  const [activeExpandedCard, setActiveExpandedCard] = useState<'expense' | 'outstanding' | null>(null);
+  const [activeExpandedCard, setActiveExpandedCard] = useState<'expense' | 'cardBillPayments' | null>(null);
 
   if (!user) return null;
 
   // Filter transactions for this month
   const monthTxs = transactions.filter((t) => t.date.startsWith(selectedMonth));
 
+  // Monthly Expenses exclude Card Bill Payments (debt settlements)
   const monthlyExpense = monthTxs
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalOutstanding = creditCards.reduce((sum, c) => sum + c.balance, 0);
+  // Total Card Bill Payments in selected month
+  const cardBillPaymentsTxs = monthTxs.filter(
+    (t) => t.type === 'expense' && isCardBillPaymentCategory(t.category)
+  );
+  const monthlyCardBillPayments = cardBillPaymentsTxs.reduce((sum, t) => sum + t.amount, 0);
 
   // Group month expenses by category (cleaned of parentheticals) sorted descending
   const expenseGrouped = useMemo(() => {
     const groups: Record<string, number> = {};
     monthTxs
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
       .forEach((t) => {
         const cat = (t.category || 'Other').replace(/\s*\(.*\)/, '').trim();
         groups[cat] = (groups[cat] || 0) + t.amount;
@@ -125,16 +131,15 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
   const displayLabel = `${monthName} ${yearStr}`;
 
   // Get data values for sparklines
-  // 1. Overall expense values
+  // 1. Overall expense values (excluding card bill payments)
   const expenseValues = monthTxs
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((t) => t.amount)
     .slice(-8);
 
-  // 2. Card-specific transaction trend
-  const cardTxs = monthTxs
-    .filter((t) => t.type === 'expense' && t.cardId)
+  // 2. Card Bill Payment trend values
+  const cardBillTrend = cardBillPaymentsTxs
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((t) => t.amount)
     .slice(-8);
@@ -152,15 +157,15 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
       sparkData: expenseValues,
     },
     {
-      key: 'outstanding' as const,
-      label: 'Card Outstanding',
-      value: totalOutstanding,
+      key: 'cardBillPayments' as const,
+      label: 'Card Bill Payments',
+      value: monthlyCardBillPayments,
       prefix: '',
-      subtext: 'Total outstanding balances',
+      subtext: `Paid in ${displayLabel}`,
       icon: CreditCard,
-      color: '#FACC15',
-      glowColor: 'gold' as const,
-      sparkData: cardTxs.length > 0 ? cardTxs : expenseValues,
+      color: '#00C8FF',
+      glowColor: 'blue' as const,
+      sparkData: cardBillTrend.length > 0 ? cardBillTrend : expenseValues,
     },
   ];
 
@@ -235,13 +240,13 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
             className="w-full overflow-hidden text-left"
           >
             <Card 
-              glowColor={activeExpandedCard === 'expense' ? 'red' : 'gold'} 
+              glowColor={activeExpandedCard === 'expense' ? 'red' : 'blue'} 
               clipCorners={true} 
               className="p-4 bg-slate-950/60 border border-white/15"
             >
               <h4 className="text-[9px] font-mono uppercase tracking-widest text-[#94A3B8] border-b border-white/5 pb-2 mb-3.5 font-bold">
                 {activeExpandedCard === 'expense' && 'Monthly Upkeep Breakdown'}
-                {activeExpandedCard === 'outstanding' && 'Outstanding Card Balances'}
+                {activeExpandedCard === 'cardBillPayments' && 'Card Bill Payments Log'}
               </h4>
 
               {activeExpandedCard === 'expense' && (
@@ -267,30 +272,30 @@ export const StatsHUD: React.FC<StatsHUDProps> = ({ selectedMonth }) => {
                 </div>
               )}
 
-              {activeExpandedCard === 'outstanding' && (
+              {activeExpandedCard === 'cardBillPayments' && (
                 <div className="space-y-3">
-                  {creditCards.length === 0 ? (
-                    <p className="text-[9px] font-sans text-slate-500 uppercase tracking-wider text-center py-4">No credit cards equipped</p>
+                  {cardBillPaymentsTxs.length === 0 ? (
+                    <p className="text-[9px] font-sans text-slate-500 uppercase tracking-wider text-center py-4">No card bill payments recorded in selected month</p>
                   ) : (
-                    creditCards.map((card) => {
-                      const utilPercent = card.limit > 0 ? Math.round((card.balance / card.limit) * 100) : 0;
+                    cardBillPaymentsTxs.map((tx) => {
+                      const linkedCard = creditCards.find((c) => c.id === tx.cardId);
                       return (
-                        <div key={card.id} className="space-y-1">
-                          <div className="flex justify-between items-center text-[10px] font-sans">
-                            <span className="text-slate-300 font-bold uppercase tracking-wider">{card.name}</span>
-                            <span className="text-white font-mono font-bold">{card.balance.toLocaleString()} G ({utilPercent}% limit)</span>
+                        <div key={tx.id} className="p-2.5 bg-slate-900/60 rounded-xl border border-white/5 flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-bold text-white">{tx.description}</p>
+                            <p className="text-[9px] font-mono text-slate-400 mt-0.5">
+                              {tx.date} {linkedCard ? `• Card: ${linkedCard.name}` : (tx.paymentMethod ? `• ${tx.paymentMethod}` : '')}
+                            </p>
                           </div>
-                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${Math.min(utilPercent, 100)}%` }} />
-                          </div>
+                          <span className="font-mono font-bold text-[#00C8FF]">
+                            {tx.amount.toLocaleString()} G
+                          </span>
                         </div>
                       );
                     })
                   )}
                 </div>
               )}
-
-              {/* Removed available credit details */}
             </Card>
           </motion.div>
         )}

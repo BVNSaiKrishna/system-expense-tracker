@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { dbService } from '../services/dbService';
 import { Transaction, CreditCard } from '../types';
 import { useNotification } from '../components/layout/NotificationSystem';
+import { isCardBillPaymentCategory } from '../utils/finance';
 
 export const useTransactions = () => {
   const { user, updateUserStats } = useAuth();
@@ -30,18 +31,22 @@ export const useTransactions = () => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['transactions', userId] });
 
+      const isBillPayment = isCardBillPaymentCategory(newTx.category);
+
       // Financial balance & XP updates
       if (newTx.type === 'expense') {
         if (newTx.cardId) {
-          // Charged to Credit Card Relic
+          // Charged or Paid towards Credit Card Relic
           try {
             const cards = queryClient.getQueryData<CreditCard[]>(['creditCards', userId]) || 
                           await dbService.getCreditCards(userId, isGuest);
             const targetCard = cards.find((c) => c.id === newTx.cardId);
             if (targetCard) {
+              // Card Bill Payment reduces outstanding balance, regular expense increases it
+              const balanceDelta = isBillPayment ? -newTx.amount : newTx.amount;
               const updatedCard = {
                 ...targetCard,
-                balance: targetCard.balance + newTx.amount,
+                balance: Math.max(0, targetCard.balance + balanceDelta),
               };
               await dbService.updateCreditCard(userId, isGuest, updatedCard);
               queryClient.invalidateQueries({ queryKey: ['creditCards', userId] });
@@ -49,20 +54,20 @@ export const useTransactions = () => {
           } catch (e) {
             console.error('Error updating credit card balance:', e);
           }
-          // Award XP, Gold remains unchanged
+          // Award XP
           await updateUserStats(10, 0);
           addNotification({
             title: 'SYSTEM UPDATED',
-            message: 'Expense Recorded Successfully',
+            message: isBillPayment ? 'Card Bill Payment Recorded' : 'Expense Recorded Successfully',
             type: 'success',
             xpGained: 10,
           });
         } else {
-          // Cash/Wallet Expense
+          // Cash/Wallet Expense or Card Bill Payment from wallet
           await updateUserStats(10, -newTx.amount);
           addNotification({
             title: 'SYSTEM UPDATED',
-            message: 'Expense Recorded Successfully',
+            message: isBillPayment ? 'Card Bill Payment Recorded' : 'Expense Recorded Successfully',
             type: 'success',
             xpGained: 10,
           });

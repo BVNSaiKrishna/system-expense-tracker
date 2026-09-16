@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { TransactionForm } from './TransactionForm';
 import { Transaction } from '../../types';
+import { isCardBillPaymentCategory } from '../../utils/finance';
 import {
   Search,
   Trash2,
@@ -22,13 +23,17 @@ import {
   Swords,
   Briefcase,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Layers,
+  Calendar as CalendarIcon,
+  Wallet
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Category to Icon Mapper
 const getCategoryIcon = (category: string) => {
   const normalized = category.toLowerCase();
+  if (normalized.includes('card bill') || normalized.includes('bill payment')) return CreditCard;
   if (normalized.includes('food') || normalized.includes('provisions') || normalized.includes('dine')) return Utensils;
   if (normalized.includes('gear') || normalized.includes('equip') || normalized.includes('shop') || normalized.includes('purchase')) return ShoppingBag;
   if (normalized.includes('medical') || normalized.includes('elixir') || normalized.includes('health')) return HeartPulse;
@@ -42,6 +47,7 @@ const getCategoryIcon = (category: string) => {
 
 const getCategoryColor = (category: string) => {
   const normalized = category.toLowerCase();
+  if (normalized.includes('card bill') || normalized.includes('bill payment')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
   if (normalized.includes('food') || normalized.includes('provisions')) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   if (normalized.includes('gear') || normalized.includes('equip') || normalized.includes('shop')) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
   if (normalized.includes('bill') || normalized.includes('rent')) return 'bg-red-500/10 text-red-400 border-red-500/20';
@@ -70,11 +76,24 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
   const [cardFilter, setCardFilter] = useState('all'); // Filter by card ID/Cash
   const [startDate, setStartDate] = useState(''); // Custom range start date
   const [endDate, setEndDate] = useState(''); // Custom range end date
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-  // Derive unique categories (cleaned of parentheticals)
+  // Grouping Mode: 'category' | 'date' | 'paymentMethod'
+  const [groupByMode, setGroupByMode] = useState<'category' | 'date' | 'paymentMethod'>('category');
+
+  // Derive unique categories (cleaned of parentheticals and deduplicated case-insensitively)
   const categories = useMemo(() => {
-    return ['all', ...Array.from(new Set(transactions.map((tx) => (tx.category || '').replace(/\s*\(.*\)/, '').trim())))];
+    const catMap = new Map<string, string>();
+    transactions.forEach((tx) => {
+      const cleaned = (tx.category || '').replace(/\s*\(.*\)/, '').trim();
+      if (cleaned) {
+        const lower = cleaned.toLowerCase();
+        if (!catMap.has(lower)) {
+          catMap.set(lower, cleaned);
+        }
+      }
+    });
+    return ['all', ...Array.from(catMap.values())];
   }, [transactions]);
 
   // Filter transactions
@@ -88,7 +107,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
           tx.description.toLowerCase().includes(search.toLowerCase()) ||
           cleanedCat.toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === 'all' || tx.type === typeFilter;
-        const matchesCategory = categoryFilter === 'all' || cleanedCat === categoryFilter;
+        const matchesCategory = categoryFilter === 'all' || cleanedCat.toLowerCase() === categoryFilter.toLowerCase();
 
         // Card filter check
         let matchesCard = true;
@@ -107,36 +126,60 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, search, typeFilter, categoryFilter, cardFilter, startDate, endDate, selectedMonth]);
 
-  // Group by category (cleaned of parentheticals)
-  const groupedByCategory = useMemo(() => {
-    const groups: Record<string, typeof transactions> = {};
+  // Grouped transactions based on groupByMode with case-folded keys
+  const groupedData = useMemo(() => {
+    if (groupByMode === 'date') {
+      const map = new Map<string, { key: string; label: string; items: Transaction[]; totalSum: number }>();
+      filteredTxs.forEach((tx) => {
+        const dateKey = tx.date || 'Unknown Date';
+        if (!map.has(dateKey)) {
+          map.set(dateKey, { key: dateKey, label: dateKey, items: [], totalSum: 0 });
+        }
+        const grp = map.get(dateKey)!;
+        grp.items.push(tx);
+        grp.totalSum += tx.type === 'income' ? tx.amount : -tx.amount;
+      });
+      return Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
+    }
+
+    if (groupByMode === 'paymentMethod') {
+      const map = new Map<string, { key: string; label: string; items: Transaction[]; totalSum: number }>();
+      filteredTxs.forEach((tx) => {
+        let pmRaw = tx.paymentMethod || (tx.cardId ? 'Credit Card' : 'Cash');
+        if (tx.cardId) {
+          const matchedCard = creditCards.find((c) => c.id === tx.cardId);
+          if (matchedCard) pmRaw = `Card: ${matchedCard.name}`;
+        }
+        const pmLower = pmRaw.trim().toLowerCase();
+        if (!map.has(pmLower)) {
+          map.set(pmLower, { key: pmLower, label: pmRaw.trim(), items: [], totalSum: 0 });
+        }
+        const grp = map.get(pmLower)!;
+        grp.items.push(tx);
+        grp.totalSum += tx.type === 'income' ? tx.amount : -tx.amount;
+      });
+      return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    // Default: 'category' - group case-insensitively!
+    const map = new Map<string, { key: string; label: string; items: Transaction[]; totalSum: number }>();
     filteredTxs.forEach((tx) => {
-      const cat = (tx.category || 'Uncategorized').replace(/\s*\(.*\)/, '').trim();
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(tx);
+      const cleaned = (tx.category || 'Uncategorized').replace(/\s*\(.*\)/, '').trim() || 'Uncategorized';
+      const catLower = cleaned.toLowerCase();
+      if (!map.has(catLower)) {
+        map.set(catLower, { key: catLower, label: cleaned, items: [], totalSum: 0 });
+      }
+      const grp = map.get(catLower)!;
+      grp.items.push(tx);
+      grp.totalSum += tx.type === 'income' ? tx.amount : -tx.amount;
     });
-    return groups;
-  }, [filteredTxs]);
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [filteredTxs, groupByMode, creditCards]);
 
-  // Sum categories
-  const categorySums = useMemo(() => {
-    const sums: Record<string, number> = {};
-    Object.keys(groupedByCategory).forEach((cat) => {
-      sums[cat] = groupedByCategory[cat].reduce((sum, tx) => {
-        return sum + (tx.type === 'expense' ? -tx.amount : tx.amount);
-      }, 0);
-    });
-    return sums;
-  }, [groupedByCategory]);
-
-  const categoryOrder = useMemo(() => {
-    return Object.keys(groupedByCategory).sort((a, b) => a.localeCompare(b));
-  }, [groupedByCategory]);
-
-  const toggleCategory = (catName: string) => {
-    setExpandedCategories((prev) => ({
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups((prev) => ({
       ...prev,
-      [catName]: !prev[catName]
+      [groupKey]: prev[groupKey] === undefined ? false : !prev[groupKey],
     }));
   };
 
@@ -177,16 +220,50 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
             Archived logs: {filteredTxs.length} entries matching parameters
           </span>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleCSVExport}
-          disabled={filteredTxs.length === 0}
-          className="w-full md:w-auto rounded-xl py-2 px-4 text-[9px] font-sans font-bold uppercase tracking-wider"
-        >
-          <Download className="w-4 h-4" />
-          Export CSV Registry
-        </Button>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          {/* Grouping Selector Buttons */}
+          <div className="flex bg-slate-950/40 p-1 rounded-xl border border-white/5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+            <button
+              onClick={() => setGroupByMode('category')}
+              className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                groupByMode === 'category' ? 'bg-[#00C8FF]/20 text-[#00C8FF] border border-[#00C8FF]/30' : 'hover:text-white'
+              }`}
+            >
+              <Layers className="w-3 h-3" />
+              Category
+            </button>
+            <button
+              onClick={() => setGroupByMode('date')}
+              className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                groupByMode === 'date' ? 'bg-[#00C8FF]/20 text-[#00C8FF] border border-[#00C8FF]/30' : 'hover:text-white'
+              }`}
+            >
+              <CalendarIcon className="w-3 h-3" />
+              Date
+            </button>
+            <button
+              onClick={() => setGroupByMode('paymentMethod')}
+              className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                groupByMode === 'paymentMethod' ? 'bg-[#00C8FF]/20 text-[#00C8FF] border border-[#00C8FF]/30' : 'hover:text-white'
+              }`}
+            >
+              <Wallet className="w-3 h-3" />
+              Payment
+            </button>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleCSVExport}
+            disabled={filteredTxs.length === 0}
+            className="rounded-xl py-2 px-4 text-[9px] font-sans font-bold uppercase tracking-wider"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* 2. Search and Category filter chips */}
@@ -289,7 +366,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
         {/* Horizontal Category Filter Chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-2 px-2">
           {categories.map((cat) => {
-            const isActive = categoryFilter === cat;
+            const isActive = categoryFilter.toLowerCase() === cat.toLowerCase();
             return (
               <button
                 key={cat}
@@ -321,29 +398,30 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
         </div>
       ) : (
         <div className="flex flex-col gap-3 flex-grow">
-          {categoryOrder.map((group) => {
-            const items = groupedByCategory[group];
+          {groupedData.map((group) => {
+            const items = group.items;
             if (!items || items.length === 0) return null;
 
-            const isExpanded = !!expandedCategories[group];
-            const catSum = categorySums[group];
-            const CatIcon = getCategoryIcon(group);
-            const catBadgeColor = getCategoryColor(group);
+            // Default to expanded unless explicitly toggled off
+            const isExpanded = expandedGroups[group.key] !== false;
+            const groupSum = group.totalSum;
+            const GroupIcon = getCategoryIcon(group.label);
+            const groupBadgeColor = getCategoryColor(group.label);
 
             return (
-              <div key={group} className="border border-white/5 bg-slate-900/20 rounded-xl overflow-hidden transition-all duration-200">
+              <div key={group.key} className="border border-white/5 bg-slate-900/20 rounded-xl overflow-hidden transition-all duration-200">
                 {/* Collapsible Accordion Header */}
                 <div
-                  onClick={() => toggleCategory(group)}
+                  onClick={() => toggleGroup(group.key)}
                   className="px-4 py-3 bg-slate-900/50 hover:bg-slate-900/70 flex items-center justify-between cursor-pointer select-none text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center border ${catBadgeColor}`}>
-                      <CatIcon className="w-4.5 h-4.5" />
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center border ${groupBadgeColor}`}>
+                      <GroupIcon className="w-4.5 h-4.5" />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-white uppercase tracking-wide">
-                        {group.replace(/\s*\(.*\)/, '')}
+                        {group.label}
                       </h4>
                       <span className="text-[9px] font-mono text-slate-500 uppercase mt-0.5 block">
                         {items.length} operation{items.length > 1 ? 's' : ''}
@@ -353,9 +431,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
 
                   <div className="flex items-center gap-3">
                     <span className={`text-xs font-mono font-bold ${
-                      catSum >= 0 ? 'text-[#22C55E]' : 'text-slate-200'
+                      groupSum >= 0 ? 'text-[#22C55E]' : 'text-slate-200'
                     }`}>
-                      {catSum >= 0 ? '+' : ''}{catSum.toLocaleString()} G
+                      {groupSum >= 0 ? '+' : ''}{groupSum.toLocaleString()} G
                     </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -378,6 +456,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
                       <div className="p-2 space-y-1.5">
                         {items.map((tx) => {
                           const isIncome = tx.type === 'income';
+                          const isCardBill = isCardBillPaymentCategory(tx.category);
                           return (
                             <div key={tx.id} className="relative overflow-hidden rounded-lg">
                               {/* Underneath desaturated swipe-delete background indicator */}
@@ -401,9 +480,22 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
                                 className="relative flex items-center justify-between p-3 bg-slate-900/40 hover:bg-slate-900/60 border border-white/5 hover:border-white/10 rounded-lg group transition-all select-none cursor-grab active:cursor-grabbing text-xs text-left"
                               >
                                 <div>
-                                  <p className="font-semibold text-slate-200">{tx.description}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-slate-200">{tx.description}</p>
+                                    {isCardBill && (
+                                      <span className="px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[8px] font-mono uppercase font-bold">
+                                        Card Bill
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="flex flex-wrap items-center gap-2 mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-wider">
                                     <span>{tx.date}</span>
+                                    {tx.category && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{tx.category.replace(/\s*\(.*\)/, '')}</span>
+                                      </>
+                                    )}
                                     {tx.paymentMethod && (
                                       <>
                                         <span>•</span>
@@ -418,7 +510,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ selectedMonth 
 
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   <span className={`font-mono font-bold ${
-                                    isIncome ? 'text-[#22C55E]' : 'text-slate-200'
+                                    isIncome ? 'text-[#22C55E]' : isCardBill ? 'text-[#00C8FF]' : 'text-slate-200'
                                   }`}>
                                     {isIncome ? '+' : '-'}{tx.amount.toLocaleString()} G
                                   </span>

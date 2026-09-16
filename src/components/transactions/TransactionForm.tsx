@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTransactions } from '../../hooks/useTransactions';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { Button } from '../ui/Button';
@@ -37,6 +37,7 @@ const EXPENSE_CATEGORIES = [
   { name: 'Elixirs (Medical)', icon: HeartPulse },
   { name: 'Travel (Transport)', icon: Car },
   { name: 'Tavern (Games)', icon: Beer },
+  { name: 'Card Bill Payments', icon: CreditCard },
 ];
 
 const INCOME_CATEGORIES = [
@@ -68,7 +69,7 @@ function CompassIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, transactionToEdit }) => {
-  const { addTransaction, updateTransaction } = useTransactions();
+  const { transactions, addTransaction, updateTransaction } = useTransactions();
   const { creditCards } = useCreditCards();
 
   const isEditing = !!transactionToEdit;
@@ -94,14 +95,84 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
       return [];
     }
   });
+
+  // Combine custom categories from localStorage AND existing transactions, deduplicated & excluding presets
+  const combinedCustomCategories = useMemo(() => {
+    const presetCleanedList = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].flatMap((c) => [
+      c.name.toLowerCase(),
+      c.name.replace(/\s*\(.*\)/, '').trim().toLowerCase(),
+    ]);
+
+    const customMap = new Map<string, string>(); // lowercase -> display string
+
+    // 1. From savedCategories
+    savedCategories.forEach((cat) => {
+      const cleaned = cat.replace(/\s*\(.*\)/, '').trim();
+      const lower = cleaned.toLowerCase();
+      if (cleaned && !presetCleanedList.includes(lower)) {
+        if (!customMap.has(lower)) {
+          customMap.set(lower, cleaned);
+        }
+      }
+    });
+
+    // 2. From transactions history
+    transactions.forEach((t) => {
+      if (t.category) {
+        const cleaned = t.category.replace(/\s*\(.*\)/, '').trim();
+        const lower = cleaned.toLowerCase();
+        if (cleaned && !presetCleanedList.includes(lower)) {
+          if (!customMap.has(lower)) {
+            customMap.set(lower, cleaned);
+          }
+        }
+      }
+    });
+
+    return Array.from(customMap.values());
+  }, [savedCategories, transactions]);
+
+  // Combine custom payment methods from localStorage AND existing transactions
+  const combinedCustomPayments = useMemo(() => {
+    const presetList = ['cash', 'upi', 'debit card', 'wallet', 'bank account', 'credit', 'credit card'];
+    const customMap = new Map<string, string>(); // lowercase -> display string
+
+    // 1. From savedPayments
+    savedPayments.forEach((pm) => {
+      const cleaned = pm.trim();
+      const lower = cleaned.toLowerCase();
+      if (cleaned && !presetList.includes(lower) && !lower.startsWith('card:')) {
+        if (!customMap.has(lower)) {
+          customMap.set(lower, cleaned);
+        }
+      }
+    });
+
+    // 2. From transactions history
+    transactions.forEach((t) => {
+      if (t.paymentMethod) {
+        const cleaned = t.paymentMethod.trim();
+        const lower = cleaned.toLowerCase();
+        if (cleaned && !presetList.includes(lower) && !lower.startsWith('card:')) {
+          if (!customMap.has(lower)) {
+            customMap.set(lower, cleaned);
+          }
+        }
+      }
+    });
+
+    return Array.from(customMap.values());
+  }, [savedPayments, transactions]);
   
   // Categorization logic
   const isCategoryCustom = () => {
     if (!transactionToEdit) return false;
-    const presets = transactionToEdit.type === 'expense' 
-      ? [...EXPENSE_CATEGORIES.map(c => c.name), ...savedCategories] 
-      : [...INCOME_CATEGORIES.map(c => c.name), ...savedCategories];
-    return !presets.includes(transactionToEdit.category);
+    const allPresets = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].flatMap((c) => [
+      c.name.toLowerCase(),
+      c.name.replace(/\s*\(.*\)/, '').trim().toLowerCase(),
+    ]);
+    const lowerCategory = transactionToEdit.category.replace(/\s*\(.*\)/, '').trim().toLowerCase();
+    return !allPresets.includes(lowerCategory);
   };
   
   const [isCustomCategory, setIsCustomCategory] = useState(isCategoryCustom());
@@ -114,7 +185,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
   const getInitialPaymentMethod = () => {
     if (!transactionToEdit) return 'Cash';
     if (transactionToEdit.cardId) return 'credit';
-    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...savedPayments];
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...combinedCustomPayments];
     if (presets.includes(transactionToEdit.paymentMethod || '')) return transactionToEdit.paymentMethod || 'Cash';
     return 'CUSTOM_PAYMENT';
   };
@@ -122,7 +193,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
   const isPaymentCustom = () => {
     if (!transactionToEdit) return false;
     if (transactionToEdit.cardId) return false;
-    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...savedPayments];
+    const presets = ['Cash', 'UPI', 'Debit Card', 'Wallet', 'Bank Account', ...combinedCustomPayments];
     return !presets.includes(transactionToEdit.paymentMethod || '');
   };
  
@@ -174,10 +245,42 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
       return;
     }
 
-    const finalCategory = isCustomCategory ? customCategory.trim() : category;
-    if (isCustomCategory && !finalCategory) {
-      setError('Please specify custom category.');
-      return;
+    let finalCategory = category;
+    if (isCustomCategory) {
+      const rawCustom = customCategory.trim();
+      if (!rawCustom) {
+        setError('Please specify custom category.');
+        return;
+      }
+
+      const cleanedCustom = rawCustom.replace(/\s*\(.*\)/, '').trim();
+      const lowerCustom = cleanedCustom.toLowerCase();
+
+      // Check if matches preset category case-insensitively
+      const presetMatch = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].find((c) => {
+        const pClean = c.name.replace(/\s*\(.*\)/, '').trim().toLowerCase();
+        return pClean === lowerCustom || c.name.toLowerCase() === lowerCustom;
+      });
+
+      if (presetMatch) {
+        finalCategory = presetMatch.name;
+      } else {
+        // Check if matches existing saved custom category case-insensitively
+        const existingSaved = combinedCustomCategories.find((s) => s.toLowerCase() === lowerCustom);
+        if (existingSaved) {
+          finalCategory = existingSaved;
+        } else {
+          finalCategory = cleanedCustom;
+        }
+
+        // Persist new custom category to state & localStorage
+        const existsInSaved = savedCategories.some((s) => s.toLowerCase() === lowerCustom);
+        if (!existsInSaved) {
+          const updated = [...savedCategories, finalCategory];
+          setSavedCategories(updated);
+          localStorage.setItem('expenseTracker_customCategories', JSON.stringify(updated));
+        }
+      }
     }
 
     let finalPaymentMethod = paymentMethod;
@@ -223,20 +326,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
         });
       }
 
-      // Save custom category if typed
-      if (isCustomCategory && finalCategory) {
-        const cleaned = finalCategory.replace(/\s*\(.*\)/, '').trim();
-        if (cleaned && !savedCategories.includes(cleaned)) {
-          const updated = [...savedCategories, cleaned];
-          localStorage.setItem('expenseTracker_customCategories', JSON.stringify(updated));
-        }
-      }
-
       // Save custom payment method if typed
       if (isCustomPayment && finalPaymentMethod) {
         const cleaned = finalPaymentMethod.trim();
         if (cleaned && !savedPayments.includes(cleaned)) {
           const updated = [...savedPayments, cleaned];
+          setSavedPayments(updated);
           localStorage.setItem('expenseTracker_customPayments', JSON.stringify(updated));
         }
       }
@@ -307,7 +402,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
             );
           })}
 
-          {savedCategories.map((catName) => {
+          {combinedCustomCategories.map((catName) => {
             const isSelected = !isCustomCategory && category === catName;
             return (
               <button
@@ -407,7 +502,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSuccess, tra
             </button>
           )}
 
-          {savedPayments.map((pm) => {
+          {combinedCustomPayments.map((pm) => {
             const isSelected = !isCustomPayment && paymentMethod === pm;
             return (
               <button

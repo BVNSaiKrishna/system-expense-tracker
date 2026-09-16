@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTransactions } from '../hooks/useTransactions';
 import { Card } from '../components/ui/Card';
 import { MonthFilterWidget } from '../components/dashboard/MonthFilterWidget';
+import { isCardBillPaymentCategory } from '../utils/finance';
 import {
   BarChart,
   Bar,
@@ -36,7 +37,13 @@ export const Analytics: React.FC = () => {
 
   const monthlyExpense = useMemo(() => {
     return monthTxs
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [monthTxs]);
+
+  const monthlyCardBillPayments = useMemo(() => {
+    return monthTxs
+      .filter((t) => t.type === 'expense' && isCardBillPaymentCategory(t.category))
       .reduce((sum, t) => sum + t.amount, 0);
   }, [monthTxs]);
 
@@ -46,7 +53,7 @@ export const Analytics: React.FC = () => {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     transactions.forEach((tx) => {
-      if (tx.type !== 'expense') return; // only track expenses
+      if (tx.type !== 'expense' || isCardBillPaymentCategory(tx.category)) return; // exclude non-expense and card bill payments
       const dateObj = new Date(tx.date);
       const key = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
       const monthLabel = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
@@ -67,7 +74,7 @@ export const Analytics: React.FC = () => {
   const categoryData = useMemo(() => {
     const catMap: Record<string, number> = {};
     monthTxs
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
       .forEach((tx) => {
         const cleanedCat = (tx.category || 'Other').replace(/\s*\(.*\)/, '').trim();
         catMap[cleanedCat] = (catMap[cleanedCat] || 0) + tx.amount;
@@ -92,7 +99,7 @@ export const Analytics: React.FC = () => {
     }
 
     monthTxs
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === 'expense' && !isCardBillPaymentCategory(t.category))
       .forEach((tx) => {
         const dateDay = new Date(tx.date).getDate();
         if (dailyMap[dateDay] !== undefined) {
@@ -120,7 +127,7 @@ export const Analytics: React.FC = () => {
 
   const creditCardSpend = useMemo(() => {
     return monthTxs
-      .filter((t) => t.type === 'expense' && t.cardId)
+      .filter((t) => t.type === 'expense' && t.cardId && !isCardBillPaymentCategory(t.category))
       .reduce((sum, t) => sum + t.amount, 0);
   }, [monthTxs]);
 
